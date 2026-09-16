@@ -1,0 +1,70 @@
+# job_scraper configuration
+#
+# search: filters applied to every posting found across all companies.
+# companies: the list of companies to scrape. Each entry is one of:
+#   1. Fast path (preferred): platform + slug, when you already know the
+#      company runs a known ATS. Skips detection entirely.
+#        - name: Acme Corp
+#          platform: greenhouse   # greenhouse | lever | ashby | smartrecruiters
+#                                 # | recruitee | personio | teamtailor
+#          slug: acme
+#   2. Auto-detect: give the company's careers page URL and let the scraper
+#      find an embedded/linked ATS board on it.
+#        - name: Acme Corp
+#          careers_url: https://acme.com/careers
+#   3. If auto-detect finds no known ATS, the scraper automatically falls
+#      back to the generic HTML/JSON-LD scraper on that same careers_url --
+#      no extra config needed, but results are less reliable.
+
+search:
+  # Poland-based (or Poland-eligible remote) roles. Extend freely --
+  # e.g. add specific cities you'd consider, or "EMEA" if you want to also
+  # catch broader-region remote postings that may include Poland.
+  location_keywords:
+    - poland
+    - warsaw
+    - warszawa
+    - krakow
+    - kraków
+    - wroclaw
+    - wrocław
+    - gdansk
+    - gdańsk
+    - gdynia
+    - poznan
+    - poznań
+    - lodz
+    - łódź
+    - katowice
+    - remote - poland
+    - remote (poland)
+    - remote, poland
+    - emea remote
+
+  # Only keep postings whose text reads as English (heuristic, see
+  # job_scraper/filters.py) -- filters out Polish-only listings.
+  english_only: true
+
+  # Drop postings that explicitly demand Polish fluency, even if the rest
+  # of the listing is in English.
+  exclude_if_requires_polish: true
+
+  # TODO: fill in with your actual role/title keywords once you share your
+  # experience/resume -- these are placeholders and will match very broadly
+  # in the meantime.
+  role_keywords:
+    - software engineer
+    - backend engineer
+    - backend developer
+    - full stack engineer
+    - full-stack engineer
+
+companies:
+  # TODO: replace with real companies -- deferred until you're ready to
+  # come back to this. These are schema examples only (fake slugs/URLs) and
+  # will simply fail to fetch/log a warning and be skipped, harmlessly.
+  - name: Example Co (Greenhouse)
+    platform: greenhouse
+    slug: your-company-slug
+  - name: Example Co (auto-detect)
+    careers_url: https://example.com/careers
