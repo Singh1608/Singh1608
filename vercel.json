@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/jobs.py": {
+      "maxDuration": 60
+    }
+  }
+}

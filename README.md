@@ -53,6 +53,36 @@ Edit `config.yaml`:
   examples with fake slugs/URLs, not real companies. Replace with actual
   companies you want to track (to be filled in later).
 
+## Web dashboard (Vercel)
+
+`public/index.html` is a static dashboard with a "Run scrape" button; it
+calls `api/jobs.py`, a Python serverless function that runs the same
+`job_scraper` package as the CLI and returns filtered postings as JSON. No
+build step, no framework — Vercel serves `public/` as static files and
+`api/*.py` as a Python function automatically.
+
+To deploy:
+
+```bash
+npm install -g vercel   # or: npx vercel
+vercel login            # or set VERCEL_TOKEN and pass --token
+vercel link              # first time only, links this dir to a Vercel project
+vercel deploy --prod
+```
+
+Or connect the GitHub repo in the Vercel dashboard ("Import Project") for
+deploys on every push — no CLI needed.
+
+Notes:
+
+- `vercel.json` sets `maxDuration: 60` for `api/jobs.py` since scraping many
+  companies serially can be slow; if you add enough companies to exceed that
+  (or hit your plan's function timeout limit), the next step is caching
+  results (e.g. Vercel Cron + KV/Blob storage) instead of scraping on every
+  request — not needed yet with the current company list.
+- Until `companies` in `config.yaml` has real entries, the deployed site will
+  correctly return zero results rather than erroring.
+
 ## Testing
 
 ```bash
