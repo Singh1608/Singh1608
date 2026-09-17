@@ -49,15 +49,26 @@ search:
   # of the listing is in English.
   exclude_if_requires_polish: true
 
-  # TODO: fill in with your actual role/title keywords once you share your
-  # experience/resume -- these are placeholders and will match very broadly
-  # in the meantime.
+  # Tuned to your background: management consulting / business
+  # transformation / strategy, spanning banking (FAB), corporate (Al-Ghurair),
+  # intelligent automation (Kagool) and Big 4 finance transformation
+  # (Deloitte). Adjust freely as you refine what you're targeting.
   role_keywords:
-    - software engineer
-    - backend engineer
-    - backend developer
-    - full stack engineer
-    - full-stack engineer
+    - management consultant
+    - management consulting
+    - strategy consultant
+    - transformation consultant
+    - business transformation
+    - business analyst
+    - corporate strategy
+    - strategy & operations
+    - strategy and operations
+    - finance transformation
+    - process improvement
+    - process excellence
+    - pmo
+    - operations analyst
+    - business operations
 
 companies:
   # TODO: replace with real companies -- deferred until you're ready to
