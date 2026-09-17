@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Poland Role Pipeline</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f6f5;
+    --surface: #ffffff;
+    --surface-2: #eaefed;
+    --ink: #16211e;
+    --muted: #5d6b66;
+    --line: #dce3e0;
+    --accent: #1f6f5c;
+    --accent-ink: #ffffff;
+    --flag: #9a6311;
+    --flag-bg: #fbf0dd;
+    --applied: #256d46;
+    --applied-bg: #e2f1e8;
+    --dim: #7c8a85;
+    --t1: #1f6f5c;
+    --t2: #486f96;
+    --t3: #8a8175;
+    --err: #b3352b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #12171a;
+      --surface: #1a2125;
+      --surface-2: #222b30;
+      --ink: #e7eeeb;
+      --muted: #95a39e;
+      --line: #2b353a;
+      --accent: #5cc0a4;
+      --accent-ink: #07231d;
+      --flag: #e0ac5d;
+      --flag-bg: #2e2617;
+      --applied: #74ca9a;
+      --applied-bg: #17301f;
+      --dim: #7d8b86;
+      --t1: #5cc0a4;
+      --t2: #82adda;
+      --t3: #a89d8d;
+      --err: #e8776c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .head-inner { padding-block: 14px 10px; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 0; }
+  .chips { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 10px; }
+  .chip {
+    flex: 0 0 auto; font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 7px 13px; min-height: 36px; cursor: pointer; white-space: nowrap;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip .n { opacity: 0.75; margin-left: 4px; }
+  .chip:focus-visible, .act:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  main { padding-block: 14px 56px; }
+
+  .job {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 3px solid var(--tier, var(--line));
+    border-radius: 8px; padding: 13px 14px; margin-bottom: 9px;
+  }
+  .job.is-dismissed { opacity: 0.52; }
+  .job-co { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .job-title { font-size: 15.5px; font-weight: 700; margin: 1px 0 0; line-height: 1.3; }
+  .job-why { font-size: 13px; color: var(--muted); margin: 7px 0 0; }
+  .job-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .tierpill {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--tier); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px;
+  }
+  .state {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    border-radius: 4px; padding: 3px 7px;
+  }
+  .state.flagged { color: var(--flag); background: var(--flag-bg); }
+  .state.applied { color: var(--applied); background: var(--applied-bg); }
+  .spacer { flex: 1; }
+  .act {
+    font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+    border-radius: 7px; padding: 8px 12px; min-height: 40px; cursor: pointer;
+  }
+  .act[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .open {
+    font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none;
+    padding: 8px 2px; min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .open:hover { text-decoration: underline; }
+  .found { font-size: 11.5px; color: var(--dim); }
+
+  .note {
+    border: 1px dashed var(--line); border-radius: 8px; padding: 14px;
+    color: var(--muted); font-size: 13.5px; line-height: 1.5;
+  }
+  .note b { color: var(--ink); }
+  .note.bad { border-color: var(--err); color: var(--err); }
+  footer { color: var(--dim); font-size: 11.5px; padding-block: 0 40px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-inner">
+    <h1>Poland Role Pipeline</h1>
+    <p class="sub" id="sub">English-speaking consulting, strategy and transformation roles.</p>
+    <div class="chips" id="chips" role="group" aria-label="Filter by status"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="list"></div>
+</main>
+
+<footer class="wrap">
+  Roles are refreshed daily and stored in full — nothing is ever removed, so
+  “All” stays the complete history. Flags are saved in this browser.
+</footer>
+
+<script>
+(function () {
+  var FEED = "https://raw.githubusercontent.com/Singh1608/Singh1608/main/jobs.json";
+  var EMBEDDED = {"updated_at":"2026-09-17T15:20:00Z","count":19,"jobs":[{"id":"accenture-74ec6229","title":"Strategy Consultant — Operating Model & Organizational Design","company":"Accenture","url":"https://www.accenture.com/be-en/careers/jobdetails?id=R00291171_en","tier":1,"why":"Designing enterprise operating models and advising on reorganisations — your FAB coverage-model redesign (1,500+ groups, 10 teams) and Al-Ghurair TOM. Asks 2+ yrs strategy consulting.","status":"new","found_at":"2026-09-17"},{"id":"accenture-0d4f8d5b","title":"S&C Poland — Strategy Analyst, Warsaw","company":"Accenture","url":"https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Warsaw/S-C-GN-Poland---Strategy---Analyst_R00285728-1/apply","tier":1,"why":"Warsaw-based opening in Accenture's Strategy practice.","status":"new","found_at":"2026-09-17"},{"id":"mastercard-683b568e","title":"Consultant, Advisors & Consulting Services — Strategy & Transformation","company":"Mastercard","url":"https://careers.mastercard.com/us/en/job/R-265030/Consultant-Advisors-Consulting-Services-Strategy-Transformation","tier":1,"why":"Management consulting inside a payments company. You rebuilt ACH processing settling ~$200mn weekly and spent a year in wholesale banking.","status":"new","found_at":"2026-09-17"},{"id":"deloitte-53238f2c","title":"Consultant — CFO Advisory, Finance Strategy & Operations, Warsaw","company":"Deloitte","url":"https://jobs.accaglobal.com/job/14139992/consultant-cfo-advisory-finance-strategy-and-operations-warsaw/","tier":1,"why":"Your old practice and your old work, different city. Alumni status is a real advantage here.","status":"new","found_at":"2026-09-17"},{"id":"pwc-56b7d01c","title":"(Senior) Consultant — Finance Transformation, Warsaw","company":"PwC","url":"https://workopia.io/jobs/7200efc29418a2d5f73d640967448450","tier":1,"why":"End-to-end finance operating model redesign and ERP-driven transformation: your Deloitte Workday work plus the Al-Ghurair TOM, verbatim.","status":"new","found_at":"2026-09-17"},{"id":"ey-2e51af70","title":"Business Transformation Consultant, Warsaw","company":"EY","url":"https://careers.ey.com/ey/job/Warszawa-Business-Transformation-Consultant-MZ-01-208/697111101/","tier":1,"why":"Straight business transformation consulting, Warsaw-based.","status":"new","found_at":"2026-09-17"},{"id":"capco-444dbc9e","title":"Business Analyst — Product Control","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8146866","tier":2,"why":"Finance transformation across Global Markets at a consultancy that does only financial services.","status":"new","found_at":"2026-09-17"},{"id":"capco-14f10e97","title":"Senior Business Analyst","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7383078","tier":2,"why":"Senior BA in Capco's Warsaw business consulting team.","status":"new","found_at":"2026-09-17"},{"id":"capco-83bd1ad1","title":"Senior Business Analyst — Cards","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8081357","tier":2,"why":"Large-scale cards transformation for banking clients.","status":"new","found_at":"2026-09-17"},{"id":"capco-9a4df712","title":"Business Analyst — Payments","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/5236287","tier":2,"why":"Payments transformation — closest match to your Deloitte ACH/NACHA rebuild.","status":"new","found_at":"2026-09-17"},{"id":"capco-4ab243a3","title":"Business Analyst — BCIM/TPM","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7962951","tier":2,"why":"Transformation and governance initiatives across business and technology.","status":"new","found_at":"2026-09-17"},{"id":"bcg-b287111f","title":"Associate or Consultant, Warsaw","company":"BCG","url":"https://jobs.managementconsulted.com/jobs/499260478-associate-or-consultant-warsaw","tier":2,"why":"MBB generalist consulting in Warsaw. IESE MiM plus 4 yrs is a credible Consultant-track profile.","status":"new","found_at":"2026-09-17"},{"id":"pwc-strategy-964bc868","title":"Team Member — Strategy&, Warsaw","company":"PwC Strategy&","url":"https://jobs-cee.pwc.com/ce/en/job/528973WD/Team-Member-Strategy","tier":2,"why":"PwC's strategy arm in Warsaw.","status":"new","found_at":"2026-09-17"},{"id":"accenture-6e9f6c9d","title":"M&A Strategy Analyst / Consultant — Accenture Strategy","company":"Accenture","url":"https://en.wizbii.com/company/accenture/job/analyst-accenture-strategy-practice-m-a","tier":2,"why":"Transaction advisory. Your Kazakhstan market-entry case — sizing the FCY gap, modelling three entry structures — is exactly this shape.","status":"new","found_at":"2026-09-17"},{"id":"ey-440cb83d","title":"Technology Strategy & Transformation Consultant","company":"EY","url":"https://workopia.io/jobs/9edf367d6c532fcaaf7df11f2e826298","tier":2,"why":"Digital transformation for financial and insurance clients.","status":"new","found_at":"2026-09-17"},{"id":"accenture-683cffaa","title":"Business Strategy Consultant — ICH Europe","company":"Accenture","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Business_Strategy_Consultant_Life_SciencesHealthcare_ICH_Europe.id21304756","tier":2,"why":"Growth strategy, market entry, corporate strategy, operating model, M&A. Capabilities match; industry (life sciences) does not.","status":"new","found_at":"2026-09-17"},{"id":"xebia-bd137a8b","title":"Poland & CEE job board","company":"Xebia","url":"https://job-boards.greenhouse.io/xebiacee","tier":3,"why":"Intelligent automation and digital transformation — your Kagool year. This is the whole board, not one posting.","status":"new","found_at":"2026-09-17"},{"id":"efinancialcareers-bdda0526","title":"Lead Operational Excellence Specialist, Warsaw","company":"eFinancialCareers","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Lead_Operational_Excellence_Specialist.id24201705","tier":3,"why":"Operational excellence with your Lean Six Sigma and Treasury process redesign behind it.","status":"new","found_at":"2026-09-17"},{"id":"vml-enterprise-solutions-c729b96c","title":"Senior Project Manager — Poland","company":"VML Enterprise Solutions","url":"https://job-boards.greenhouse.io/vmlenterprisesolutions/jobs/8328979002","tier":3,"why":"Agile delivery and operational improvement. PMO-adjacent rather than strategy.","status":"new","found_at":"2026-09-17"}]};
+  var FLAG_KEY = "pipeline.flags.v1";
+  var FILTER_KEY = "pipeline.filter.v1";
+
+  var TIERS = {
+    1: { label: "Direct match", color: "var(--t1)" },
+    2: { label: "Strong fit",   color: "var(--t2)" },
+    3: { label: "Adjacent",     color: "var(--t3)" }
+  };
+  var FILTERS = [
+    { key: "open",      label: "Open" },
+    { key: "flagged",   label: "Flagged" },
+    { key: "applied",   label: "Applied" },
+    { key: "dismissed", label: "Dismissed" },
+    { key: "all",       label: "All" }
+  ];
+
+  var listEl = document.getElementById("list");
+  var chipsEl = document.getElementById("chips");
+  var subEl = document.getElementById("sub");
+
+  // The roles ship inside the page, so it renders the full pipeline even if
+  // the feed is unreachable. The fetch below is a freshness upgrade, not a
+  // dependency -- an artifact-backed page has no network hop and neither
+  // should this one.
+  var jobs = (EMBEDDED && EMBEDDED.jobs) || [];
+  var flags = read(FLAG_KEY, {});
+  var filter = read(FILTER_KEY, "open");
+  if (typeof filter !== "string") filter = "open";
+
+  function read(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private window */ }
+  }
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  // A flag set here wins; otherwise fall back to the status in the feed, so a
+  // role marked elsewhere still shows its state on first visit.
+  function statusOf(job) { return flags[job.id] || job.status || "new"; }
+
+  function matches(job) {
+    var st = statusOf(job);
+    if (filter === "all") return true;
+    if (filter === "open") return st === "new" || st === "flagged";
+    return st === filter;
+  }
+
+  function counts() {
+    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, all: jobs.length };
+    jobs.forEach(function (j) {
+      var st = statusOf(j);
+      if (st === "new" || st === "flagged") c.open++;
+      if (st === "flagged") c.flagged++;
+      if (st === "applied") c.applied++;
+      if (st === "dismissed") c.dismissed++;
+    });
+    return c;
+  }
+
+  function labelFor(key) {
+    for (var i = 0; i < FILTERS.length; i++) if (FILTERS[i].key === key) return FILTERS[i].label;
+    return key;
+  }
+
+  function renderChips() {
+    var c = counts();
+    chipsEl.innerHTML = FILTERS.map(function (f) {
+      return '<button class="chip" type="button" data-filter="' + f.key + '" aria-pressed="' +
+        (filter === f.key) + '">' + esc(f.label) + '<span class="n mono">' + c[f.key] + "</span></button>";
+    }).join("");
+  }
+
+  function renderList() {
+    if (!jobs.length) {
+      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next daily refresh will add them.</p>';
+      return;
+    }
+    var shown = jobs.filter(matches);
+    if (!shown.length) {
+      listEl.innerHTML = '<p class="note">Nothing under <b>' + esc(labelFor(filter)) +
+        "</b> right now. Try another filter.</p>";
+      return;
+    }
+    shown.sort(function (a, b) {
+      return (a.tier || 9) - (b.tier || 9) || String(a.company).localeCompare(String(b.company));
+    });
+
+    listEl.innerHTML = shown.map(function (j) {
+      var st = statusOf(j);
+      var tier = TIERS[j.tier] || { label: "Unranked", color: "var(--line)" };
+      var stateTag = st === "flagged"
+        ? '<span class="state flagged">Flagged</span>'
+        : st === "applied" ? '<span class="state applied">Applied</span>' : "";
+      return '' +
+        '<article class="job' + (st === "dismissed" ? " is-dismissed" : "") +
+          '" style="--tier: ' + tier.color + '">' +
+          '<div class="job-co">' + esc(j.company) + "</div>" +
+          '<p class="job-title">' + esc(j.title) + "</p>" +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") +
+          '<div class="job-foot">' +
+            '<span class="tierpill">' + esc(tier.label) + "</span>" + stateTag +
+            (j.found_at ? '<span class="found mono">' + esc(j.found_at) + "</span>" : "") +
+            '<span class="spacer"></span>' +
+            '<a class="open" href="' + esc(j.url) + '" target="_blank" rel="noopener">Open &rarr;</a>' +
+          "</div>" +
+          '<div class="job-foot">' +
+            '<button class="act" type="button" data-act="flagged" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "flagged") + '">Flag</button>' +
+            '<button class="act" type="button" data-act="applied" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "applied") + '">Applied</button>' +
+            '<button class="act" type="button" data-act="dismissed" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "dismissed") + '">Dismiss</button>' +
+          "</div>" +
+        "</article>";
+    }).join("");
+  }
+
+  function render() { renderChips(); renderList(); }
+
+  function showUpdated(stamp, n) {
+    if (!stamp) return;
+    var when = new Date(stamp);
+    subEl.textContent = n + " roles tracked \u00b7 last refreshed " +
+      (isNaN(when) ? stamp : when.toLocaleString());
+  }
+
+  chipsEl.addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    filter = btn.dataset.filter;
+    write(FILTER_KEY, filter);
+    render();
+  });
+
+  listEl.addEventListener("click", function (e) {
+    var btn = e.target.closest(".act");
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var want = btn.dataset.act;
+    var job = jobs.filter(function (j) { return j.id === id; })[0];
+    if (!job) return;
+    // Pressing the active state again returns the role to the open list.
+    flags[id] = (statusOf(job) === want) ? "new" : want;
+    write(FLAG_KEY, flags);
+    render();
+  });
+
+  if (EMBEDDED && EMBEDDED.updated_at) showUpdated(EMBEDDED.updated_at, jobs.length);
+  render();
+
+  fetch(FEED + "?t=" + Date.now(), { cache: "no-store" })
+    .then(function (res) {
+      if (!res.ok) throw new Error("feed returned " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      if (!data || !data.jobs || !data.jobs.length) return;
+      jobs = data.jobs;
+      showUpdated(data.updated_at, jobs.length);
+      render();
+    })
+    .catch(function () {
+      // Never clear the page for a failed refresh: the roles built into it are
+      // still the right ones, only the freshness claim is stale.
+      subEl.textContent += " · offline copy";
+    });
+})();
+</script>
+</body>
+</html>
