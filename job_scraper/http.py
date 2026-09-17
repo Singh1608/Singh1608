@@ -10,7 +10,7 @@ USER_AGENT = (
     "+https://github.com/singh1608/singh1608)"
 )
 
-DEFAULT_TIMEOUT = 20
+DEFAULT_TIMEOUT = 10
 
 _session = requests.Session()
 _session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json, text/html"})

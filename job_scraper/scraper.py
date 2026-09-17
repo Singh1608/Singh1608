@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from job_scraper import generic
 from job_scraper.detectors import REGISTRY
@@ -59,8 +60,14 @@ def scrape_company(company_cfg: dict) -> list[JobPosting]:
         return []
 
 
+MAX_PARALLEL_COMPANIES = 8
+
+
 def scrape_all(companies_cfg: list[dict]) -> list[JobPosting]:
-    all_postings: list[JobPosting] = []
-    for company_cfg in companies_cfg:
-        all_postings.extend(scrape_company(company_cfg))
-    return all_postings
+    # Scraped in parallel because the serverless function caps out at 60s and
+    # scraping companies one at a time, each with its own HTTP timeouts, runs
+    # well past that. scrape_company swallows its own exceptions, so a failing
+    # company still just yields an empty list here.
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL_COMPANIES) as pool:
+        per_company = pool.map(scrape_company, companies_cfg)
+    return [posting for postings in per_company for posting in postings]

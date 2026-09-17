@@ -32,7 +32,10 @@ _JOB_LINK_PATTERN = re.compile(
     r"/(job|jobs|career|careers|position|positions|vacanc(?:y|ies)|opening|openings)s?/[^/?#]+",
     re.I,
 )
-_MAX_LINKS_TO_FOLLOW = 40
+# Each followed link is its own HTTP request, so this is the main driver of
+# how long a generic-fallback company takes. Kept low to stay inside the
+# serverless function's time budget.
+_MAX_LINKS_TO_FOLLOW = 8
 
 
 def _parse_json_ld(soup: BeautifulSoup, page_url: str, company_name: str) -> list[JobPosting]:
