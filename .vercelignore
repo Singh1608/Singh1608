@@ -1,0 +1,10 @@
+# The Vercel site is a static page; the Python scraper is CLI-only and must
+# not be uploaded. Without this, Vercel sees requirements.txt/pyproject.toml,
+# runs its Python builder, and fails the build hunting for an entrypoint.
+requirements.txt
+pyproject.toml
+main.py
+job_scraper/
+tests/
+config.yaml
+README.md
