@@ -44,6 +44,30 @@ def detect_platform(careers_url: str) -> tuple[str, str] | None:
     return None
 
 
+def _probe_platforms(slug: str, name: str) -> CompanyResult:
+    """Find which ATS hosts this company's board by trying each one.
+
+    Knowing a company's name is easy; knowing which of seven ATS platforms it
+    runs is not, and guessing wrong silently yields nothing. A company's board
+    lives on exactly one platform and the rest return 404 in milliseconds, so
+    probing is both cheap and self-correcting.
+    """
+    tried = []
+    for platform, module in REGISTRY.items():
+        try:
+            postings = module.fetch_jobs(slug, name)
+        except Exception:  # noqa: BLE001 - a 404 here just means "not this one"
+            tried.append(platform)
+            continue
+        if postings:
+            return CompanyResult(name, postings, platform)
+        tried.append(platform)
+
+    return CompanyResult(
+        name, [], "", f"no board found for slug '{slug}' on: {', '.join(tried)}"
+    )
+
+
 def scrape_company(company_cfg: dict) -> CompanyResult:
     name = company_cfg["name"]
     platform = company_cfg.get("platform")
@@ -55,6 +79,9 @@ def scrape_company(company_cfg: dict) -> CompanyResult:
             if platform not in REGISTRY:
                 raise ValueError(f"Unknown platform '{platform}' for {name}")
             return CompanyResult(name, REGISTRY[platform].fetch_jobs(slug, name), platform)
+
+        if slug:
+            return _probe_platforms(slug, name)
 
         if not careers_url:
             raise ValueError(f"Company '{name}' needs either platform+slug or careers_url")
@@ -73,7 +100,7 @@ def scrape_company(company_cfg: dict) -> CompanyResult:
         return CompanyResult(name, [], platform or "", str(exc)[:200])
 
 
-MAX_PARALLEL_COMPANIES = 8
+MAX_PARALLEL_COMPANIES = 12
 
 
 def scrape_all(companies_cfg: list[dict]) -> list[CompanyResult]:

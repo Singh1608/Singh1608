@@ -2,19 +2,20 @@
 #
 # search: filters applied to every posting found across all companies.
 # companies: the list of companies to scrape. Each entry is one of:
-#   1. Fast path (preferred): platform + slug, when you already know the
-#      company runs a known ATS. Skips detection entirely.
+#   1. Slug only (preferred) -- the scraper probes every known ATS until it
+#      finds the company's board. Use this when you know the company but not
+#      which ATS it runs, which is almost always.
+#        - {name: Acme Corp, slug: acme}
+#   2. platform + slug, when you already know the ATS. Skips probing.
 #        - name: Acme Corp
 #          platform: greenhouse   # greenhouse | lever | ashby | smartrecruiters
 #                                 # | recruitee | personio | teamtailor
 #          slug: acme
-#   2. Auto-detect: give the company's careers page URL and let the scraper
-#      find an embedded/linked ATS board on it.
+#   3. careers_url -- looks for an ATS link in the page, else falls back to
+#      scraping the HTML. Works poorly in practice: most career pages are
+#      JavaScript apps whose job lists are not in the HTML we fetch. Prefer 1.
 #        - name: Acme Corp
 #          careers_url: https://acme.com/careers
-#   3. If auto-detect finds no known ATS, the scraper automatically falls
-#      back to the generic HTML/JSON-LD scraper on that same careers_url --
-#      no extra config needed, but results are less reliable.
 
 search:
   # Poland-based (or Poland-eligible remote) roles. Extend freely --
@@ -145,55 +146,57 @@ search:
     - nurse
 
 companies:
-  # STARTING LIST -- UNVERIFIED. These careers URLs were written without
-  # network access to check them, so some will 404 or have moved. They use
-  # the auto-detect path on purpose: give the scraper a careers page and it
-  # finds the ATS behind it, which is far more robust than guessing ATS
-  # slugs. Run `python3 main.py` and read the "returned nothing" summary at
-  # the end to see which ones need their URL corrected or removed.
+  # Direct ATS lookups only. Giving just a slug makes the scraper probe every
+  # known ATS until it finds the company's board -- a wrong guess costs one
+  # fast 404, and the per-company panel shows exactly which slugs resolved.
   #
-  # Coverage caveat: the consulting firms and banks that fit your profile
-  # best (Big 4, MBB, Citi, Goldman, ING, Nordea) mostly run Workday or
-  # SuccessFactors, which this scraper does not support yet -- see README.
-  # This list is therefore weighted to companies on supported platforms that
-  # still hire strategy, transformation, bizops and PMO people.
+  # careers_url entries were removed deliberately: most company career pages
+  # are JavaScript apps whose job lists never appear in the HTML we fetch, so
+  # that path found almost nothing. ATS APIs are plain JSON and need no JS.
+  #
+  # These slugs are educated guesses, not verified. Expect a chunk to miss;
+  # delete the ones that report "no board found" and keep the rest.
 
-  - name: SmartRecruiters
-    platform: smartrecruiters
-    slug: smartrecruiters
+  # Polish companies / Poland HQ
+  - {name: DocPlanner, slug: docplanner}
+  - {name: Booksy, slug: booksy}
+  - {name: Brainly, slug: brainly}
+  - {name: Netguru, slug: netguru}
+  - {name: Tidio, slug: tidio}
+  - {name: Packhelp, slug: packhelp}
+  - {name: Infermedica, slug: infermedica}
+  - {name: Spacelift, slug: spacelift}
+  - {name: Vue Storefront, slug: vuestorefront}
+  - {name: Zowie, slug: zowie}
+  - {name: Nomagic, slug: nomagic}
 
-  # Polish companies / Polish HQ
-  - name: DocPlanner
-    careers_url: https://jobs.docplanner.tech/
-  - name: Allegro
-    careers_url: https://allegro.pl/kariera
-  - name: Booksy
-    careers_url: https://booksy.com/careers/
-  - name: Brainly
-    careers_url: https://brainly.co/careers/
-  - name: InPost
-    careers_url: https://inpost.pl/kariera
-  - name: Netguru
-    careers_url: https://www.netguru.com/career
-  - name: STX Next
-    careers_url: https://www.stxnext.com/careers/
+  # International, with Poland offices
+  - {name: Revolut, slug: revolut}
+  - {name: Zalando, slug: zalando}
+  - {name: Bolt, slug: bolt}
+  - {name: Wolt, slug: wolt}
+  - {name: Glovo, slug: glovo}
+  - {name: HelloFresh, slug: hellofresh}
+  - {name: Delivery Hero, slug: deliveryhero}
+  - {name: Cloudflare, slug: cloudflare}
+  - {name: SumUp, slug: sumup}
+  - {name: N26, slug: n26}
+  - {name: Klarna, slug: klarna}
+  - {name: Wise, slug: wise}
+  - {name: Spotify, slug: spotify}
+  - {name: Trustpilot, slug: trustpilot}
+  - {name: Adyen, slug: adyen}
+  - {name: Backbase, slug: backbase}
+  - {name: Personio, slug: personio}
 
-  # International companies with Poland offices
-  - name: Revolut
-    careers_url: https://www.revolut.com/careers/
-  - name: Zalando
-    careers_url: https://jobs.zalando.com/en/jobs
-  - name: Bolt
-    careers_url: https://bolt.eu/en/careers/
-  - name: Wolt
-    careers_url: https://careers.wolt.com/en/jobs
-  - name: Glovo
-    careers_url: https://jobs.glovoapp.com/
-  - name: HelloFresh
-    careers_url: https://careers.hellofresh.com/global/en/search-results
-  - name: Delivery Hero
-    careers_url: https://careers.deliveryhero.com/global/en/search-results
-
-  # Fully remote, hires in Poland
-  - name: GitLab
-    careers_url: https://about.gitlab.com/jobs/all-jobs/
+  # Remote-first, hire in Poland
+  - {name: GitLab, slug: gitlab}
+  - {name: Automattic, slug: automattic}
+  - {name: Canonical, slug: canonical}
+  - {name: Grafana Labs, slug: grafanalabs}
+  - {name: Elastic, slug: elastic}
+  - {name: Remote, slug: remote}
+  - {name: Deel, slug: deel}
+  - {name: Toggl, slug: toggl}
+  - {name: Doist, slug: doist}
+  - {name: SmartRecruiters, slug: smartrecruiters}

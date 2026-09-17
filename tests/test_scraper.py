@@ -37,6 +37,24 @@ class TestScrapeCompany(unittest.TestCase):
         self.assertEqual(result.error, "")
         mock_fetch.assert_called_once_with("acme", "Acme")
 
+    @patch("job_scraper.detectors.lever.fetch_jobs")
+    @patch("job_scraper.detectors.greenhouse.fetch_jobs")
+    def test_slug_only_probes_until_a_board_answers(self, mock_gh, mock_lever):
+        mock_gh.side_effect = Exception("404 Not Found")
+        mock_lever.return_value = [
+            JobPosting(company="Acme", title="Consultant", url="u", platform="lever")
+        ]
+        result = scrape_company({"name": "Acme", "slug": "acme"})
+        self.assertEqual(result.platform, "lever")
+        self.assertEqual(len(result.postings), 1)
+
+    @patch("job_scraper.detectors.greenhouse.fetch_jobs")
+    def test_slug_only_reports_when_no_board_found(self, mock_gh):
+        mock_gh.side_effect = Exception("404 Not Found")
+        result = scrape_company({"name": "Acme", "slug": "nope"})
+        self.assertEqual(result.postings, [])
+        self.assertIn("no board found", result.error)
+
     def test_missing_config_reports_error_not_raises(self):
         result = scrape_company({"name": "Acme"})
         self.assertEqual(result.postings, [])
