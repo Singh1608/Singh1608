@@ -3,254 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Poland Job Scraper</title>
+<title>Poland Role Pipeline</title>
 <style>
   :root {
-    --bg: #f7f7f8;
-    --card: #ffffff;
-    --text: #1a1a1a;
-    --muted: #6b6b70;
-    --border: #e4e4e7;
-    --accent: #2f6f4f;
-    --accent-bg: #e8f3ee;
+    color-scheme: light;
+    --bg: #f3f6f5;
+    --surface: #ffffff;
+    --ink: #16211e;
+    --muted: #5d6b66;
+    --line: #dce3e0;
+    --accent: #1f6f5c;
+    --accent-ink: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #17181a;
-      --card: #212226;
-      --text: #ececee;
-      --muted: #9a9aa0;
-      --border: #34353a;
-      --accent: #6fcf9b;
-      --accent-bg: #1f3329;
+      color-scheme: dark;
+      --bg: #12171a;
+      --surface: #1a2125;
+      --ink: #e7eeeb;
+      --muted: #95a39e;
+      --line: #2b353a;
+      --accent: #5cc0a4;
+      --accent-ink: #07231d;
     }
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  header {
-    padding: 24px 16px;
-    max-width: 860px;
-    margin: 0 auto;
-  }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .subtitle { color: var(--muted); font-size: 14px; margin: 0; }
-  .toolbar {
+    min-height: 100vh;
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 16px;
-    flex-wrap: wrap;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 24px 16px;
   }
-  button {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 24px;
+    max-width: 440px;
+    width: 100%;
+  }
+  h1 { font-size: 20px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  p { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
+  a.go {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--accent);
-    color: #08130e;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+    color: var(--accent-ink);
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 9px;
+    padding: 13px 20px;
+    min-height: 48px;
+    width: 100%;
   }
-  button:disabled { opacity: 0.6; cursor: default; }
-  input[type="search"] {
-    flex: 1;
-    min-width: 160px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--text);
-    font-size: 14px;
-  }
-  .status { color: var(--muted); font-size: 13px; }
-  main { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; }
-  .job {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-  .job-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-  .job-title { font-size: 16px; font-weight: 600; margin: 0; }
-  .job-company { color: var(--muted); font-size: 13px; }
-  .badge {
-    display: inline-block;
-    background: var(--accent-bg);
-    color: var(--accent);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 999px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  .job-meta { color: var(--muted); font-size: 13px; margin: 6px 0 10px; }
-  .job-desc {
-    font-size: 13px;
-    color: var(--muted);
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease;
-  }
-  .job.expanded .job-desc { max-height: 400px; overflow-y: auto; }
-  .job a.apply { color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
-  .empty, .error {
-    text-align: center;
-    color: var(--muted);
-    padding: 48px 16px;
-    font-size: 14px;
-  }
-  .error { color: #c0392b; }
-  details.diag {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0 16px 48px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  details.diag summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
-  .diag-row {
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .diag-count {
-    font-variant-numeric: tabular-nums;
-    min-width: 62px;
-    color: var(--text);
-  }
-  .diag-name { min-width: 120px; color: var(--text); }
-  .diag-detail { flex: 1; word-break: break-word; }
-  .diag-detail.err { color: #c0392b; }
+  .fine { font-size: 12.5px; margin: 16px 0 0; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Poland Job Scraper</h1>
-  <p class="subtitle">English-speaking roles at companies that publish jobs on their own career pages.</p>
-  <div class="toolbar">
-    <button id="refresh">Run scrape</button>
-    <input id="search" type="search" placeholder="Filter by title or company...">
-    <span id="status" class="status"></span>
-  </div>
-</header>
-<main id="results">
-  <p class="empty">Click "Run scrape" to fetch the latest matching postings.</p>
-</main>
-<details class="diag" id="diagWrap" hidden>
-  <summary id="diagSummary">Per-company results</summary>
-  <div id="diagRows"></div>
-</details>
-
-<script>
-  const refreshBtn = document.getElementById('refresh');
-  const searchInput = document.getElementById('search');
-  const statusEl = document.getElementById('status');
-  const resultsEl = document.getElementById('results');
-  const diagWrap = document.getElementById('diagWrap');
-  const diagSummary = document.getElementById('diagSummary');
-  const diagRows = document.getElementById('diagRows');
-  let allJobs = [];
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
-
-  function render(jobs) {
-    if (!jobs.length) {
-      // Distinguish "your search box filtered everything out" from "the
-      // scrape itself found nothing" -- they need completely different fixes.
-      const searching = searchInput.value.trim();
-      resultsEl.innerHTML = searching
-        ? `<p class="empty">No postings match "${escapeHtml(searching)}". Clear the filter to see all ${allJobs.length} result(s).</p>`
-        : '<p class="empty">No matching postings found. Open "Per-company results" below to see which companies returned anything.</p>';
-      return;
-    }
-    resultsEl.innerHTML = jobs.map((job, i) => `
-      <div class="job" data-index="${i}">
-        <div class="job-top">
-          <p class="job-title">${escapeHtml(job.title)}</p>
-          <span class="badge">${escapeHtml(job.platform)}</span>
-        </div>
-        <div class="job-company">${escapeHtml(job.company)}</div>
-        <div class="job-meta">${escapeHtml(job.location || 'Location not specified')}${job.posted_at ? ' &middot; ' + escapeHtml(job.posted_at) : ''}</div>
-        <div class="job-desc">${escapeHtml((job.description || '').slice(0, 1500))}</div>
-        <a class="apply" href="${job.url}" target="_blank" rel="noopener">View posting &rarr;</a>
-      </div>
-    `).join('');
-
-    resultsEl.querySelectorAll('.job').forEach(el => {
-      el.addEventListener('click', (e) => {
-        if (e.target.tagName === 'A') return;
-        el.classList.toggle('expanded');
-      });
-    });
-  }
-
-  function renderDiagnostics(companies) {
-    if (!companies.length) { diagWrap.hidden = true; return; }
-    diagWrap.hidden = false;
-
-    const totalFound = companies.reduce((n, c) => n + c.found, 0);
-    const working = companies.filter(c => c.found > 0).length;
-    diagSummary.textContent =
-      `Per-company results — ${working}/${companies.length} companies returned postings, ${totalFound} scraped before filtering`;
-
-    const sorted = [...companies].sort((a, b) => b.found - a.found);
-    diagRows.innerHTML = sorted.map(c => {
-      const detail = c.error
-        ? `<span class="diag-detail err">${escapeHtml(c.error)}</span>`
-        : `<span class="diag-detail">via ${escapeHtml(c.platform || 'unknown')}</span>`;
-      return `
-        <div class="diag-row">
-          <span class="diag-count">${c.found} &rarr; ${c.matched}</span>
-          <span class="diag-name">${escapeHtml(c.name)}</span>
-          ${detail}
-        </div>`;
-    }).join('');
-  }
-
-  function applyFilter() {
-    const q = searchInput.value.trim().toLowerCase();
-    if (!q) { render(allJobs); return; }
-    render(allJobs.filter(j =>
-      (j.title || '').toLowerCase().includes(q) ||
-      (j.company || '').toLowerCase().includes(q)
-    ));
-  }
-
-  async function runScrape() {
-    refreshBtn.disabled = true;
-    statusEl.textContent = 'Scraping company career pages... this can take a while.';
-    resultsEl.innerHTML = '';
-    try {
-      const res = await fetch('/api/jobs');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Request failed');
-      allJobs = data.jobs || [];
-      statusEl.textContent = `${allJobs.length} matching posting(s) as of ${new Date().toLocaleTimeString()}`;
-      renderDiagnostics(data.companies || []);
-      applyFilter();
-    } catch (err) {
-      statusEl.textContent = '';
-      resultsEl.innerHTML = `<p class="error">Failed to fetch jobs: ${escapeHtml(err.message)}</p>`;
-    } finally {
-      refreshBtn.disabled = false;
-    }
-  }
-
-  refreshBtn.addEventListener('click', runScrape);
-  searchInput.addEventListener('input', applyFilter);
-</script>
+  <main class="card">
+    <h1>Poland Role Pipeline</h1>
+    <p>The job search moved. Roles are tracked in a live pipeline you can flag and come back to, refreshed every 12 hours.</p>
+    <a class="go" href="https://claude.ai/artifact/ARMFpqehuWJmojGwnqMAFB">Open the pipeline &rarr;</a>
+    <p class="fine">If you are not redirected automatically, use the button above. Sign in with the Claude account that owns the pipeline.</p>
+  </main>
 </body>
 </html>

@@ -8,6 +8,3 @@ dependencies = [
     "lxml>=5.0",
     "PyYAML>=6.0",
 ]
-
-[tool.vercel]
-entrypoint = "api.jobs:handler"

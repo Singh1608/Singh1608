@@ -90,35 +90,29 @@ Workday boards expose a semi-standard JSON endpoint
 (`/wday/cxs/{tenant}/{site}/jobs`), so it fits the same detector interface
 as the others in `job_scraper/detectors/`.
 
-## Web dashboard (Vercel)
+## Vercel deployment
 
-`public/index.html` is a static dashboard with a "Run scrape" button; it
-calls `api/jobs.py`, a Python serverless function that runs the same
-`job_scraper` package as the CLI and returns filtered postings as JSON. No
-build step, no framework — Vercel serves `public/` as static files and
-`api/*.py` as a Python function automatically.
+The Vercel site is now just a redirect. `vercel.json` sends every path to
+the live job pipeline, with `public/index.html` as a fallback landing page
+if the redirect rule ever fails to apply. The deployment is pure static —
+there is no serverless function, so there is nothing to build and nothing
+to time out.
 
-To deploy:
+The Python serverless dashboard that used to live here was removed. It ran
+this scraper on request, and the scraper could not reach the employers that
+matter for this search (see the coverage gap above), so the page reliably
+returned nothing. The pipeline it redirects to is maintained by scheduled
+web searches instead, which is what actually produces results.
 
 ```bash
 npm install -g vercel   # or: npx vercel
-vercel login            # or set VERCEL_TOKEN and pass --token
+vercel login
 vercel link              # first time only, links this dir to a Vercel project
 vercel deploy --prod
 ```
 
-Or connect the GitHub repo in the Vercel dashboard ("Import Project") for
-deploys on every push — no CLI needed.
-
-Notes:
-
-- `vercel.json` sets `maxDuration: 60` for `api/jobs.py` since scraping many
-  companies serially can be slow; if you add enough companies to exceed that
-  (or hit your plan's function timeout limit), the next step is caching
-  results (e.g. Vercel Cron + KV/Blob storage) instead of scraping on every
-  request — not needed yet with the current company list.
-- Until `companies` in `config.yaml` has real entries, the deployed site will
-  correctly return zero results rather than erroring.
+The scraper itself remains a working CLI (`main.py`) and is unaffected by
+any of this.
 
 ## Testing
 

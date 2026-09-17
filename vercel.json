@@ -1,7 +1,9 @@
 {
-  "functions": {
-    "api/jobs.py": {
-      "maxDuration": 60
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://claude.ai/artifact/ARMFpqehuWJmojGwnqMAFB",
+      "permanent": false
     }
-  }
+  ]
 }
