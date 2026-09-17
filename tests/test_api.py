@@ -14,6 +14,7 @@ jobs_api = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(jobs_api)
 
 from job_scraper.models import JobPosting  # noqa: E402
+from job_scraper.scraper import CompanyResult  # noqa: E402
 
 # A self-contained fixture config, independent of the real config.yaml
 # (whose companies/role_keywords are expected to change often).
@@ -31,7 +32,7 @@ companies: []
 
 
 class TestRunScrape(unittest.TestCase):
-    def test_returns_filtered_dicts(self):
+    def _run(self, company_results):
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False
         ) as f:
@@ -42,14 +43,31 @@ class TestRunScrape(unittest.TestCase):
             with patch.object(jobs_api, "CONFIG_PATH", config_path), patch.object(
                 jobs_api, "scrape_all"
             ) as mock_scrape_all:
-                mock_scrape_all.return_value = self._sample_postings()
-                results = jobs_api.run_scrape()
+                mock_scrape_all.return_value = company_results
+                return jobs_api.run_scrape()
         finally:
             os.unlink(config_path)
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["title"], "Backend Engineer")
-        self.assertIsInstance(results[0], dict)
+    def test_returns_filtered_dicts(self):
+        payload = self._run(
+            [CompanyResult("Acme", self._sample_postings(), "greenhouse")]
+        )
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["jobs"][0]["title"], "Backend Engineer")
+        self.assertIsInstance(payload["jobs"][0], dict)
+
+    def test_reports_per_company_diagnostics(self):
+        payload = self._run(
+            [
+                CompanyResult("Acme", self._sample_postings(), "greenhouse"),
+                CompanyResult("Dead Co", [], "", "404 Not Found"),
+            ]
+        )
+        acme, dead = payload["companies"]
+        self.assertEqual((acme["found"], acme["matched"]), (2, 1))
+        self.assertEqual(acme["platform"], "greenhouse")
+        self.assertEqual((dead["found"], dead["matched"]), (0, 0))
+        self.assertEqual(dead["error"], "404 Not Found")
 
     @staticmethod
     def _sample_postings():

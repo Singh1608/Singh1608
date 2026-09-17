@@ -19,23 +19,35 @@ from job_scraper.scraper import scrape_all  # noqa: E402
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config.yaml")
 
 
-def run_scrape() -> list[dict]:
+def run_scrape() -> dict:
     with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
     companies = cfg.get("companies", [])
     search_cfg = cfg.get("search", {})
 
-    postings = scrape_all(companies)
-    matches = [p for p in postings if passes_filters(p, search_cfg)]
-    return [p.to_dict() for p in matches]
+    jobs: list[dict] = []
+    diagnostics: list[dict] = []
+    for result in scrape_all(companies):
+        matched = [p for p in result.postings if passes_filters(p, search_cfg)]
+        jobs.extend(p.to_dict() for p in matched)
+        diagnostics.append(
+            {
+                "name": result.name,
+                "platform": result.platform,
+                "found": len(result.postings),
+                "matched": len(matched),
+                "error": result.error,
+            }
+        )
+
+    return {"count": len(jobs), "jobs": jobs, "companies": diagnostics}
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
-            jobs = run_scrape()
-            body = json.dumps({"count": len(jobs), "jobs": jobs}).encode("utf-8")
+            body = json.dumps(run_scrape()).encode("utf-8")
             status = 200
         except Exception as exc:  # noqa: BLE001
             body = json.dumps({"error": str(exc)}).encode("utf-8")

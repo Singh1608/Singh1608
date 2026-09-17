@@ -8,7 +8,6 @@ Usage:
 import argparse
 import logging
 import sys
-from collections import Counter
 
 import yaml
 
@@ -51,17 +50,15 @@ def main() -> int:
         return 1
 
     print(f"Scraping {len(companies)} companies...")
-    postings = scrape_all(companies)
-    print(f"Found {len(postings)} total postings.")
+    results = scrape_all(companies)
+    postings = [p for r in results for p in r.postings]
+    print(f"Found {len(postings)} total postings.\n")
 
-    found_per_company = Counter(p.company for p in postings)
-    silent = [c["name"] for c in companies if not found_per_company[c["name"]]]
-    if silent:
-        print(f"\n{len(silent)} companies returned nothing (wrong URL/slug, "
-              f"unsupported ATS, or genuinely no open roles):")
-        for name in silent:
-            print(f"  - {name}")
-        print("Re-run with -v to see why each one failed.\n")
+    print("Per company:")
+    for r in sorted(results, key=lambda r: -len(r.postings)):
+        detail = r.error or f"via {r.platform or 'unknown'}"
+        print(f"  {len(r.postings):>4}  {r.name:<20} {detail}")
+    print()
 
     if args.no_filter:
         results = postings

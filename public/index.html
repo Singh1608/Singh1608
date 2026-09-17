@@ -107,6 +107,29 @@
     font-size: 14px;
   }
   .error { color: #c0392b; }
+  details.diag {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 16px 48px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  details.diag summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+  .diag-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .diag-count {
+    font-variant-numeric: tabular-nums;
+    min-width: 62px;
+    color: var(--text);
+  }
+  .diag-name { min-width: 120px; color: var(--text); }
+  .diag-detail { flex: 1; word-break: break-word; }
+  .diag-detail.err { color: #c0392b; }
 </style>
 </head>
 <body>
@@ -122,12 +145,19 @@
 <main id="results">
   <p class="empty">Click "Run scrape" to fetch the latest matching postings.</p>
 </main>
+<details class="diag" id="diagWrap" hidden>
+  <summary id="diagSummary">Per-company results</summary>
+  <div id="diagRows"></div>
+</details>
 
 <script>
   const refreshBtn = document.getElementById('refresh');
   const searchInput = document.getElementById('search');
   const statusEl = document.getElementById('status');
   const resultsEl = document.getElementById('results');
+  const diagWrap = document.getElementById('diagWrap');
+  const diagSummary = document.getElementById('diagSummary');
+  const diagRows = document.getElementById('diagRows');
   let allJobs = [];
 
   function escapeHtml(str) {
@@ -138,7 +168,12 @@
 
   function render(jobs) {
     if (!jobs.length) {
-      resultsEl.innerHTML = '<p class="empty">No matching postings found. Companies and role filters are configured in config.yaml.</p>';
+      // Distinguish "your search box filtered everything out" from "the
+      // scrape itself found nothing" -- they need completely different fixes.
+      const searching = searchInput.value.trim();
+      resultsEl.innerHTML = searching
+        ? `<p class="empty">No postings match "${escapeHtml(searching)}". Clear the filter to see all ${allJobs.length} result(s).</p>`
+        : '<p class="empty">No matching postings found. Open "Per-company results" below to see which companies returned anything.</p>';
       return;
     }
     resultsEl.innerHTML = jobs.map((job, i) => `
@@ -162,6 +197,29 @@
     });
   }
 
+  function renderDiagnostics(companies) {
+    if (!companies.length) { diagWrap.hidden = true; return; }
+    diagWrap.hidden = false;
+
+    const totalFound = companies.reduce((n, c) => n + c.found, 0);
+    const working = companies.filter(c => c.found > 0).length;
+    diagSummary.textContent =
+      `Per-company results — ${working}/${companies.length} companies returned postings, ${totalFound} scraped before filtering`;
+
+    const sorted = [...companies].sort((a, b) => b.found - a.found);
+    diagRows.innerHTML = sorted.map(c => {
+      const detail = c.error
+        ? `<span class="diag-detail err">${escapeHtml(c.error)}</span>`
+        : `<span class="diag-detail">via ${escapeHtml(c.platform || 'unknown')}</span>`;
+      return `
+        <div class="diag-row">
+          <span class="diag-count">${c.found} &rarr; ${c.matched}</span>
+          <span class="diag-name">${escapeHtml(c.name)}</span>
+          ${detail}
+        </div>`;
+    }).join('');
+  }
+
   function applyFilter() {
     const q = searchInput.value.trim().toLowerCase();
     if (!q) { render(allJobs); return; }
@@ -181,6 +239,7 @@
       if (!res.ok) throw new Error(data.error || 'Request failed');
       allJobs = data.jobs || [];
       statusEl.textContent = `${allJobs.length} matching posting(s) as of ${new Date().toLocaleTimeString()}`;
+      renderDiagnostics(data.companies || []);
       applyFilter();
     } catch (err) {
       statusEl.textContent = '';

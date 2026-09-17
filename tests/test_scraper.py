@@ -32,12 +32,15 @@ class TestScrapeCompany(unittest.TestCase):
             JobPosting(company="Acme", title="Engineer", url="u", platform="greenhouse")
         ]
         result = scrape_company({"name": "Acme", "platform": "greenhouse", "slug": "acme"})
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result.postings), 1)
+        self.assertEqual(result.platform, "greenhouse")
+        self.assertEqual(result.error, "")
         mock_fetch.assert_called_once_with("acme", "Acme")
 
-    def test_missing_config_returns_empty_not_raises(self):
+    def test_missing_config_reports_error_not_raises(self):
         result = scrape_company({"name": "Acme"})
-        self.assertEqual(result, [])
+        self.assertEqual(result.postings, [])
+        self.assertIn("careers_url", result.error)
 
     @patch("job_scraper.scraper.generic.fetch_jobs")
     @patch("job_scraper.scraper.detect_platform")
@@ -47,13 +50,15 @@ class TestScrapeCompany(unittest.TestCase):
             JobPosting(company="Acme", title="Engineer", url="u", platform="generic")
         ]
         result = scrape_company({"name": "Acme", "careers_url": "https://acme.com/careers"})
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result.postings), 1)
+        self.assertEqual(result.platform, "generic")
         mock_generic_fetch.assert_called_once_with("https://acme.com/careers", "Acme")
 
     @patch("job_scraper.detectors.greenhouse.fetch_jobs")
     def test_unknown_platform_does_not_raise(self, mock_fetch):
         result = scrape_company({"name": "Acme", "platform": "not-a-real-ats", "slug": "acme"})
-        self.assertEqual(result, [])
+        self.assertEqual(result.postings, [])
+        self.assertIn("not-a-real-ats", result.error)
         mock_fetch.assert_not_called()
 
 
