@@ -42,16 +42,53 @@ python3 main.py --config config.yaml --no-filter   # skip filters, dump everythi
 Edit `config.yaml`:
 
 - `search.location_keywords` — Poland-related location strings to match
-  against (already filled in with major Polish cities + remote variants).
-- `search.role_keywords` — **placeholder right now**; matches broad
-  engineering titles. Update these once you've shared your actual
-  role/experience so results are relevant to you.
+  against (major Polish cities + remote variants).
+- `search.role_keywords` — loose substring match against the job **title**,
+  tuned to a Consultant / Senior Consultant / Senior Associate band covering
+  consulting & strategy, transformation, business analysis, chief of staff &
+  business management, PMO & programme management, and process /
+  operational excellence.
+- `search.exclude_title_keywords` — negative filter on the title, matched on
+  **whole words**. This is what keeps the loose keywords above usable: bare
+  `consultant` would otherwise match every Sales, Recruitment and Security
+  Consultant posting. Word-boundary matching is deliberate — a wrong
+  exclusion silently drops a real job, so `intern` must not knock out
+  "Internal Consultant".
 - `search.english_only` / `exclude_if_requires_polish` — language filtering
   heuristics (no external language-detection library; see
   `job_scraper/filters.py` for the approach and how to tune it).
-- `companies` — **placeholder right now**; the two entries are schema
-  examples with fake slugs/URLs, not real companies. Replace with actual
-  companies you want to track (to be filled in later).
+- `companies` — a starting list, **unverified**: the careers URLs were
+  written without network access to check them, so some will have moved.
+  They use the auto-detect path on purpose (give the scraper a careers page,
+  it finds the ATS behind it) rather than guessing ATS slugs.
+
+### Triaging the company list
+
+`python3 main.py` prints a summary of every company that returned nothing,
+so you can tell a bad URL from a company with no open roles:
+
+```
+16 companies returned nothing (wrong URL/slug, unsupported ATS, ...):
+  - Allegro
+  - Brainly
+```
+
+Re-run with `-v` to see the specific failure per company, then fix or drop
+the entry.
+
+### Known coverage gap
+
+The employers that fit a consulting/transformation profile best — Big 4,
+MBB, and large banks (Citi, Goldman, ING, Nordea, Santander) — mostly run
+**Workday**, SuccessFactors, Taleo or iCIMS, none of which have detectors
+yet. The supported platforms (Greenhouse, Lever, Ashby, SmartRecruiters,
+Recruitee, Personio, Teamtailor) skew toward tech companies and scaleups,
+so the seeded company list is weighted that way.
+
+Adding a Workday detector is the single biggest unlock for this profile:
+Workday boards expose a semi-standard JSON endpoint
+(`/wday/cxs/{tenant}/{site}/jobs`), so it fits the same detector interface
+as the others in `job_scraper/detectors/`.
 
 ## Web dashboard (Vercel)
 

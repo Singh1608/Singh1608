@@ -64,9 +64,25 @@ def matches_role(title: str, role_keywords: list[str]) -> bool:
     return any(kw.lower() in title_lower for kw in role_keywords)
 
 
+def excluded_by_title(title: str, exclude_keywords: list[str]) -> bool:
+    # Word-boundary matched, unlike role_keywords: a wrong exclusion silently
+    # drops a real job, so "intern" must not knock out "Internal Consultant"
+    # and "lead" must not knock out "Leadership Development".
+    if not exclude_keywords:
+        return False
+    title_lower = title.lower()
+    return any(
+        re.search(rf"\b{re.escape(kw.lower())}\b", title_lower)
+        for kw in exclude_keywords
+    )
+
+
 def passes_filters(posting: JobPosting, search_cfg: dict) -> bool:
     location_keywords = search_cfg.get("location_keywords", [])
     if location_keywords and not matches_location(posting, location_keywords):
+        return False
+
+    if excluded_by_title(posting.title, search_cfg.get("exclude_title_keywords", [])):
         return False
 
     text = f"{posting.title} {posting.description}"

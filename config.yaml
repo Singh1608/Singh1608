@@ -49,33 +49,151 @@ search:
   # of the listing is in English.
   exclude_if_requires_polish: true
 
-  # Tuned to your background: management consulting / business
-  # transformation / strategy, spanning banking (FAB), corporate (Al-Ghurair),
-  # intelligent automation (Kagool) and Big 4 finance transformation
-  # (Deloitte). Adjust freely as you refine what you're targeting.
+  # Matched as loose substrings against the job title only. Tuned to a
+  # Consultant / Senior Consultant / Senior Associate band, industry-agnostic,
+  # covering core consulting/strategy plus three adjacencies: chief of staff
+  # & business management, PMO & programme management, and process /
+  # operational excellence.
   role_keywords:
-    - management consultant
-    - management consulting
-    - strategy consultant
-    - transformation consultant
-    - business transformation
-    - business analyst
+    # Core consulting & strategy
+    - consultant
+    - consulting
+    - senior associate
     - corporate strategy
+    - business strategy
+    - commercial strategy
+    - strategy analyst
+    - strategic planning
     - strategy & operations
     - strategy and operations
-    - finance transformation
+    - corporate development
+    # Transformation
+    - transformation
+    - target operating model
+    - change management
+    # Business analysis
+    - business analyst
+    - business analysis
+    # Chief of staff & business management
+    - chief of staff
+    - business manager
+    - business management
+    - business operations
+    # PMO & programme management
+    - pmo
+    - programme manager
+    - program manager
+    - programme management
+    - program management
+    - project manager
+    # Process & operational excellence
     - process improvement
     - process excellence
-    - pmo
+    - operational excellence
+    - continuous improvement
+    - process analyst
+    - business process
     - operations analyst
-    - business operations
+
+  # Negative filter on the title, matched on whole words (see
+  # job_scraper/filters.py). This is what makes the loose role_keywords above
+  # safe -- bare "consultant" would otherwise pull in every Sales, Recruitment
+  # and Security Consultant posting in Poland.
+  exclude_title_keywords:
+    # Above your band. NOTE: bare "manager" is deliberately NOT excluded --
+    # it would kill the Programme/Project/Business Manager roles you asked to
+    # keep, where "Manager" is a peer-level title rather than a consulting
+    # grade. Add "- manager" here to enforce the band strictly.
+    - senior manager
+    - engagement manager
+    - head
+    - director
+    - vp
+    - vice president
+    - partner
+    - principal
+    - executive
+    - president
+    # Below your band
+    - intern
+    - internship
+    - trainee
+    - apprentice
+    - junior
+    - graduate programme
+    - graduate program
+    - working student
+    - entry level
+    - praktykant
+    - staz
+    # Wrong track entirely
+    - sales
+    - recruitment
+    - recruiter
+    - talent acquisition
+    - customer service
+    - account executive
+    - security
+    - cyber
+    - software engineer
+    - developer
+    - tax
+    - audit
+    - legal
+    - clinical
+    - medical
+    - nurse
 
 companies:
-  # TODO: replace with real companies -- deferred until you're ready to
-  # come back to this. These are schema examples only (fake slugs/URLs) and
-  # will simply fail to fetch/log a warning and be skipped, harmlessly.
-  - name: Example Co (Greenhouse)
-    platform: greenhouse
-    slug: your-company-slug
-  - name: Example Co (auto-detect)
-    careers_url: https://example.com/careers
+  # STARTING LIST -- UNVERIFIED. These careers URLs were written without
+  # network access to check them, so some will 404 or have moved. They use
+  # the auto-detect path on purpose: give the scraper a careers page and it
+  # finds the ATS behind it, which is far more robust than guessing ATS
+  # slugs. Run `python3 main.py` and read the "returned nothing" summary at
+  # the end to see which ones need their URL corrected or removed.
+  #
+  # Coverage caveat: the consulting firms and banks that fit your profile
+  # best (Big 4, MBB, Citi, Goldman, ING, Nordea) mostly run Workday or
+  # SuccessFactors, which this scraper does not support yet -- see README.
+  # This list is therefore weighted to companies on supported platforms that
+  # still hire strategy, transformation, bizops and PMO people.
+
+  - name: SmartRecruiters
+    platform: smartrecruiters
+    slug: smartrecruiters
+
+  # Polish companies / Polish HQ
+  - name: DocPlanner
+    careers_url: https://jobs.docplanner.tech/
+  - name: Allegro
+    careers_url: https://allegro.pl/kariera
+  - name: Booksy
+    careers_url: https://booksy.com/careers/
+  - name: Brainly
+    careers_url: https://brainly.co/careers/
+  - name: InPost
+    careers_url: https://inpost.pl/kariera
+  - name: Netguru
+    careers_url: https://www.netguru.com/career
+  - name: STX Next
+    careers_url: https://www.stxnext.com/careers/
+
+  # International companies with Poland offices
+  - name: Revolut
+    careers_url: https://www.revolut.com/careers/
+  - name: Zalando
+    careers_url: https://jobs.zalando.com/en/jobs
+  - name: Bolt
+    careers_url: https://bolt.eu/en/careers/
+  - name: Wolt
+    careers_url: https://careers.wolt.com/en/jobs
+  - name: Glovo
+    careers_url: https://jobs.glovoapp.com/
+  - name: HelloFresh
+    careers_url: https://careers.hellofresh.com/global/en/search-results
+  - name: Delivery Hero
+    careers_url: https://careers.deliveryhero.com/global/en/search-results
+
+  # Fully remote, hires in Poland
+  - name: GitLab
+    careers_url: https://about.gitlab.com/jobs/all-jobs/
