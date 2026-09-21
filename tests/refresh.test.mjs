@@ -1,0 +1,94 @@
+// Exercise refresh.js against a fake network and a fake Blob.
+const API = "../api";
+
+let blob = null;                      // stands in for the stored feed
+const realFetch = globalThis.fetch;
+
+globalThis.fetch = async (url, opts = {}) => {
+  url = String(url);
+  // Write is a PUT; the list endpoint shares the same host, so match on method
+  // first or the list call gets mistaken for a write.
+  if (opts.method === "PUT" && url.includes("blob.vercel-storage.com")) {
+    blob = JSON.parse(opts.body);
+    return { ok: true, status: 200, json: async () => ({ url: "x" }) };
+  }
+  if (url.includes("blob.vercel-storage.com") && url.includes("prefix=")) {
+    return { ok: true, json: async () => ({
+      blobs: blob ? [{ pathname: "pipeline/jobs.json", url: "https://BLOBBASE/pipeline/jobs.json" }] : [],
+    })};
+  }
+  if (url.includes("BLOBBASE")) {
+    return blob
+      ? { ok: true, json: async () => blob }
+      : { ok: false, status: 404, json: async () => null };
+  }
+  if (url.includes("boards-api.greenhouse.io/v1/boards/capco/")) {
+    return { ok: true, json: async () => ({ jobs: [
+      { title: "Senior Business Analyst", location: { name: "Warsaw, Poland" },
+        absolute_url: "https://example.test/capco/999", content: "English role" },
+      { title: "Senior Manager, Delivery", location: { name: "Warsaw, Poland" },
+        absolute_url: "https://example.test/capco/998", content: "" },
+      { title: "Business Analyst", location: { name: "London, UK" },
+        absolute_url: "https://example.test/capco/997", content: "" },
+      { title: "Consultant", location: { name: "Krak\u00f3w, Poland" },
+        absolute_url: "https://example.test/capco/996",
+        content: "Fluent Polish is required for this role." },
+    ]})};
+  }
+  return { ok: false, status: 404, json: async () => null };
+};
+
+process.env.CRON_SECRET = "s3cret";
+process.env.BLOB_READ_WRITE_TOKEN = "tok";
+
+const { default: refresh } = await import(`${API}/refresh.js`);
+
+function mkRes() {
+  const r = { code: null, body: null };
+  r.status = (c) => { r.code = c; return r; };
+  r.json = (b) => { r.body = b; return r; };
+  r.setHeader = () => {};
+  return r;
+}
+
+// 1. auth
+let res = mkRes();
+await refresh({ headers: {} }, res);
+console.log(`1. no auth            -> ${res.code} ${res.code === 401 ? "PASS" : "FAIL"}`);
+
+res = mkRes();
+await refresh({ headers: { authorization: "Bearer wrong" } }, res);
+console.log(`2. wrong auth         -> ${res.code} ${res.code === 401 ? "PASS" : "FAIL"}`);
+
+// 3. first run: seeds 19, adds the one good capco role, rejects the other three
+const auth = { headers: { authorization: "Bearer s3cret" } };
+res = mkRes();
+await refresh(auth, res);
+const r1 = res.body;
+console.log(`3. first run          -> before=${r1.before} after=${r1.after} added=${r1.added.length} ${r1.before === 19 && r1.after === 20 && r1.added.length === 1 ? "PASS" : "FAIL"}`);
+console.log(`   added: ${r1.added[0]}`);
+console.log(`   filters rejected 3 of 4 capco rows: ${r1.sources.find(s=>s.board==="Capco").matched === 1 ? "PASS" : "FAIL"}`);
+
+// 4. simulate the user flagging a role, then re-running
+blob.jobs.find(j => j.id === "capco-444dbc9e").status = "applying";
+res = mkRes();
+await refresh(auth, res);
+const r2 = res.body;
+const flag = blob.jobs.find(j => j.id === "capco-444dbc9e").status;
+console.log(`4. second run adds 0  -> added=${r2.added.length} ${r2.added.length === 0 ? "PASS" : "FAIL"}`);
+console.log(`5. flag survived      -> status="${flag}" ${flag === "applying" ? "PASS" : "FAIL"}`);
+console.log(`6. count stable       -> ${r2.after} ${r2.after === 20 ? "PASS" : "FAIL"}`);
+
+// 7. a failing blob write must not report success
+globalThis.fetch = async (url, opts = {}) => {
+  url = String(url);
+  if (opts.method === "PUT") return { ok: false, status: 503, text: async () => "unavailable" };
+  if (url.includes("prefix=")) return { ok: true, json: async () => ({ blobs: [{ pathname: "pipeline/jobs.json", url: "https://BLOBBASE/pipeline/jobs.json" }] }) };
+  if (url.includes("BLOBBASE")) return { ok: true, json: async () => blob };
+  return { ok: false, status: 404, json: async () => null };
+};
+res = mkRes();
+await refresh(auth, res);
+console.log(`7. write failure      -> ${res.code} ${res.code === 500 && !res.body.ok ? "PASS" : "FAIL"}`);
+
+globalThis.fetch = realFetch;
