@@ -141,8 +141,9 @@
 </main>
 
 <footer class="wrap">
-  Roles are refreshed every 12 hours and stored in full — nothing is ever removed, so
-  “All” stays the complete history. Flags are saved in this browser.
+  Roles are refreshed twice a day on Poland time — late morning, and again after
+  offices close — and stored in full: nothing is ever removed, so “All” stays the
+  complete history. Flags are saved in this browser.
 </footer>
 
 <script>
@@ -232,7 +233,7 @@
 
   function renderList() {
     if (!jobs.length) {
-      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next refresh (every 12 hours) will add them.</p>';
+      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next scheduled refresh will add them.</p>';
       return;
     }
     var shown = jobs.filter(matches);
