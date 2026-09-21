@@ -141,7 +141,7 @@
 </main>
 
 <footer class="wrap">
-  Roles are refreshed daily and stored in full — nothing is ever removed, so
+  Roles are refreshed every 12 hours and stored in full — nothing is ever removed, so
   “All” stays the complete history. Flags are saved in this browser.
 </footer>
 
@@ -232,7 +232,7 @@
 
   function renderList() {
     if (!jobs.length) {
-      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next daily refresh will add them.</p>';
+      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next refresh (every 12 hours) will add them.</p>';
       return;
     }
     var shown = jobs.filter(matches);
