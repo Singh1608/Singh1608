@@ -5,3 +5,12 @@ venv/
 results.json
 results.csv
 *.egg-info/
+
+# Resume source material and the tailoring agent live in a PRIVATE repo.
+# This repo is public (it serves jobs.json and the dashboard), and the resume
+# kit carries personal contact details plus employer-confidential material —
+# market-entry financials, client volumes, internal approval states. Ignored
+# here so a stray `git add -A` can never publish it.
+resume/
+tools/build_experience_master.py
+.claude/agents/
