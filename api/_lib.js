@@ -125,24 +125,37 @@ export function keep(job) {
 // educated guesses that cost one fast 404 each; the refresh response reports
 // per-source counts so dead ones are easy to spot and delete.
 
+// Every entry below was probed against the live API and returned postings.
+// Seven guessed slugs — Revolut, DocPlanner, Booksy, Netguru, Brainly, Tidio,
+// Spacelift — were removed after returning nothing on every run; they were
+// inherited guesses, and a board that answers with an empty list is
+// indistinguishable from one that has no matching roles.
 export const SOURCES = {
   greenhouse: [
-    { name: "Capco", slug: "capco", verified: true },
-    { name: "Xebia", slug: "xebiacee", verified: true },
-    { name: "VML Enterprise Solutions", slug: "vmlenterprisesolutions", verified: true },
+    { name: "Capco", slug: "capco" },
+    { name: "Xebia", slug: "xebiacee" },
+    { name: "VML Enterprise Solutions", slug: "vmlenterprisesolutions" },
     { name: "Wise", slug: "wise" },
-    { name: "Revolut", slug: "revolut" },
-    { name: "DocPlanner", slug: "docplanner" },
-    { name: "Booksy", slug: "booksy" },
-    { name: "Netguru", slug: "netguru" },
-  ],
-  lever: [
-    { name: "Brainly", slug: "brainly" },
-    { name: "Tidio", slug: "tidio" },
   ],
   ashby: [
-    { name: "Spacelift", slug: "spacelift" },
     { name: "Zowie", slug: "zowie" },
+  ],
+  // The consulting firms, on their own systems. These are where his profile
+  // actually screens well, and until now their roles only ever reached the
+  // feed second-hand through aggregators.
+  workday: [
+    {
+      name: "Accenture",
+      host: "accenture.wd103.myworkdayjobs.com",
+      tenant: "accenture",
+      site: "AccentureCareers",
+    },
+    {
+      name: "PwC",
+      host: "pwc.wd3.myworkdayjobs.com",
+      tenant: "pwc",
+      site: "Global_Experienced_Careers",
+    },
   ],
 };
 
@@ -209,10 +222,93 @@ async function fromAshby({ name, slug }) {
   }));
 }
 
+// Workday powers Accenture's and PwC's own career sites. Its public "CXS"
+// endpoint takes a POST and answers with a page of postings; both were probed
+// against the live API before being added here, unlike the slugs they replace.
+//
+// Two things it does NOT give, which matter downstream:
+//   - a real posting date, only relative prose ("Posted 30+ Days Ago")
+//   - any description, so the Polish-fluency filter cannot run on these
+async function fromWorkday({ name, host, site, tenant, pages = 4 }) {
+  const out = [];
+  for (let page = 0; page < pages; page++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let data;
+    try {
+      const res = await fetch(
+        `https://${host}/wday/cxs/${tenant}/${site}/jobs`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+            "user-agent": "poland-pipeline/1.0",
+          },
+          body: JSON.stringify({
+            limit: 20,
+            offset: page * 20,
+            searchText: "Poland",
+            appliedFacets: {},
+          }),
+        }
+      );
+      if (!res.ok) break;
+      data = await res.json();
+    } catch {
+      break; // partial results beat none
+    } finally {
+      clearTimeout(timer);
+    }
+    const batch = data?.jobPostings || [];
+    if (!batch.length) break;
+    for (const j of batch) {
+      if (!j.externalPath) continue;
+      out.push({
+        title: j.title,
+        company: name,
+        url: `https://${host}/${site}${j.externalPath}`,
+        // The city sits in the path (/job/Warsaw/...) and often in bulletFields;
+        // locationsText says "3 Locations" when there are several, which names
+        // no city at all, so the path is the more reliable of the three.
+        location: [
+          decodeURIComponent(j.externalPath.split("/")[2] || ""),
+          ...(j.bulletFields || []),
+          j.locationsText || "",
+        ].join(" "),
+        description: "",
+        posted_at: relativePostedAt(j.postedOn),
+      });
+    }
+    if (batch.length < 20) break;
+  }
+  return out;
+}
+
+// "Posted 30+ Days Ago" is not a date. Turn it into one, and be honest that it
+// is a floor rather than a fact: 30+ could be sixty. It is still far better
+// than falling back to the day we happened to look.
+function relativePostedAt(text) {
+  if (!text) return null;
+  const t = String(text).toLowerCase();
+  const day = 86_400_000;
+  let daysAgo = null;
+  if (t.includes("today")) daysAgo = 0;
+  else if (t.includes("yesterday")) daysAgo = 1;
+  else {
+    const m = t.match(/(\d+)\+?\s*day/);
+    if (m) daysAgo = Number(m[1]);
+  }
+  if (daysAgo === null) return null;
+  return new Date(Date.now() - daysAgo * day).toISOString();
+}
+
 const FETCHERS = {
   greenhouse: fromGreenhouse,
   lever: fromLever,
   ashby: fromAshby,
+  workday: fromWorkday,
 };
 
 // Every board is queried in parallel; one bad board yields [] rather than
