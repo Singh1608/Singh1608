@@ -108,6 +108,11 @@ export default async function handler(req, res) {
       if (already) {
         already.last_seen = today;
         already.live = true;
+        // Backfill the employer's posting date. Without this, entries stored
+        // before dates were captured fall back to found_at — when WE first saw
+        // the role — and every one of them reads as posted "this week", which
+        // makes the age grouping worse than useless: confidently wrong.
+        if (!already.posted_at && raw.posted_at) already.posted_at = raw.posted_at;
         continue;
       }
 

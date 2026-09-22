@@ -63,6 +63,17 @@ const EXCLUDE_TITLE_KEYWORDS = [
   "sales", "recruitment", "recruiter", "talent acquisition", "customer service",
   "account executive", "security", "cyber", "software engineer", "developer",
   "tax", "audit", "legal", "clinical", "medical", "nurse",
+  // Technical delivery roles that slipped through on a "Consultant" or
+  // "Business Analyst" prefix. The first real sweep surfaced, among others,
+  // "Consultant / Senior Consultant – IAM & Secrets Management Delivery",
+  // "Senior AI Engineer – AI Transformation & Delivery" and "Data Business
+  // Analyst – GCP / Hadoop". A screener reading his CV against any of these
+  // rejects it, so they are noise on a shortlist however well the prefix matched.
+  "iam", "secrets management", "identity", "access management",
+  "engineer", "architect", "devops", "sre", "gcp", "hadoop", "kafka",
+  "machine learning", "data science", "cloud", "platform",
+  "qa", "tester", "quality assurance", "frontend", "backend", "fullstack",
+  "full stack", "salesforce", "sap", "servicenow",
 ];
 
 // Postings that say Polish is required. He does not speak it, so these are

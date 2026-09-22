@@ -10,6 +10,8 @@
 //   2. Would this role screen his CV in?
 //      A score, because fit is a matter of degree.
 
+import { excludedByTitle } from "./_lib.js";
+
 // --- 1. link legitimacy -----------------------------------------------------
 
 // Hosts that ARE an employer's own applicant tracking system.
@@ -176,12 +178,18 @@ export function scoreFit({ title = "", company = "", why = "", location = "" }) 
 }
 
 // One gate for both questions, so nothing enters the feed that fails either.
+//
+// The title exclusions are applied here as well as in keep(). keep() only runs
+// against postings arriving from a board sweep; anything already stored is
+// re-judged through this function, so without the check here a role that got
+// in under looser rules would survive every later tightening.
 export function assess(job) {
   const link = classifyLink(job.url, job.company);
   const fit = scoreFit(job);
   const problems = [];
   if (!link.ok) problems.push(`link is ${link.kind} (${link.host})`);
   if (isBoardRoot(job.url, job.title)) problems.push("link is a board root, not a posting");
+  if (excludedByTitle(job.title)) problems.push("title is outside his track");
   if (fit.tier === 0) problems.push(`fit score ${fit.score} is below the threshold`);
   return { link, fit, usable: problems.length === 0, problems };
 }
