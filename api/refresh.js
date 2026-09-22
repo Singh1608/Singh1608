@@ -72,6 +72,26 @@ export default async function handler(req, res) {
   const seenNow = new Set();
   const today = new Date().toISOString().slice(0, 10);
 
+  // Entries stored before the gates existed carry a flat tier and boilerplate
+  // rationale. Re-assess them so the feed reads as one shortlist rather than
+  // two eras of it. `status` is his — a flag he set is never touched — and
+  // nothing is deleted; a failure is recorded on the entry instead.
+  let regraded = 0;
+  let gatedOut = 0;
+  for (const job of byId.values()) {
+    if (job.fit_score !== undefined) continue; // already gated
+    const verdict = assess(job);
+    job.tier = verdict.fit.tier;
+    job.fit_score = verdict.fit.score;
+    job.why = explain(job, verdict.fit);
+    job.link_kind = verdict.link.kind;
+    if (!verdict.usable) {
+      job.gated_out = verdict.problems.join("; ");
+      gatedOut++;
+    }
+    regraded++;
+  }
+
   for (const { platform, board, jobs } of results) {
     let matched = 0;
     for (const raw of jobs) {
@@ -188,6 +208,8 @@ export default async function handler(req, res) {
     // like it found nothing, when in fact it found things and refused them.
     rejected_count: rejected.length,
     rejected: rejected.slice(0, 20),
+    regraded,
+    gated_out: gatedOut,
     went_stale: wentStale,
     live_count: [...byId.values()].filter((j) => j.live !== false).length,
     boards_total: sources.length,
