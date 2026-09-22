@@ -17,6 +17,9 @@ function bucketOf(days) {
   return "over 3 months";
 }
 
+// No employer may occupy more than this many slots on the shortlist.
+const MAX_PER_COMPANY = 5;
+
 const BUCKET_ORDER = ["this week", "this month", "1-3 months", "over 3 months", "unknown"];
 
 export default async function handler(req, res) {
@@ -45,12 +48,35 @@ export default async function handler(req, res) {
     };
   });
 
-  // Freshest and best-fitting first. Dead and gated-out roles sink rather than
+  // Best fit first, then freshest. Dead and gated-out roles sink rather than
   // disappearing — the history is deliberate, but it should not lead.
-  jobs.sort((a, b) => {
-    if (a.actionable !== b.actionable) return a.actionable ? -1 : 1;
+  const byMerit = (a, b) => {
     if ((b.fit_score ?? 0) !== (a.fit_score ?? 0)) return (b.fit_score ?? 0) - (a.fit_score ?? 0);
     return (a.age_days ?? 9999) - (b.age_days ?? 9999);
+  };
+
+  // One employer must not own the shortlist. Capco alone matched nineteen
+  // roles, which buries every other company however well they fit — and a
+  // reader scanning the top of the list learns nothing from the fifth
+  // near-identical Business Analyst posting.
+  //
+  // Applied here rather than at storage on purpose: the feed keeps everything,
+  // the cap is a view over it, and a role held back today surfaces on its own
+  // if a better one at that employer closes.
+  const perCompany = new Map();
+  for (const job of [...jobs].filter((j) => j.actionable).sort(byMerit)) {
+    const seen = perCompany.get(job.company) ?? 0;
+    if (seen >= MAX_PER_COMPANY) {
+      job.actionable = false;
+      job.capped = `beyond the top ${MAX_PER_COMPANY} at ${job.company} on fit`;
+    } else {
+      perCompany.set(job.company, seen + 1);
+    }
+  }
+
+  jobs.sort((a, b) => {
+    if (a.actionable !== b.actionable) return a.actionable ? -1 : 1;
+    return byMerit(a, b);
   });
 
   const byBucket = {};
@@ -67,6 +93,11 @@ export default async function handler(req, res) {
     ...body,
     jobs,
     actionable_count: jobs.filter((j) => j.actionable).length,
+    capped_count: jobs.filter((j) => j.capped).length,
+    max_per_company: MAX_PER_COMPANY,
+    by_company: Object.fromEntries(
+      [...perCompany.entries()].sort((a, b) => b[1] - a[1])
+    ),
     by_age: byBucket,
   });
 }
