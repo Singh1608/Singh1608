@@ -76,16 +76,25 @@ export default async function handler(req, res) {
   // rationale. Re-assess them so the feed reads as one shortlist rather than
   // two eras of it. `status` is his — a flag he set is never touched — and
   // nothing is deleted; a failure is recorded on the entry instead.
+  // Re-assessed on EVERY run, not once. Grading only ungraded entries meant a
+  // tightened rule never reached anything already stored: the run that added
+  // the technical-role exclusions reported regraded 0 and changed nothing,
+  // leaving "IAM Governance Business Analyst" on the shortlist it was written
+  // to remove. Judgement is pure and needs no network, so re-running it is
+  // cheap and makes rule changes take effect immediately.
   let regraded = 0;
   let gatedOut = 0;
   for (const job of byId.values()) {
-    if (job.fit_score !== undefined) continue; // already gated
     const verdict = assess(job);
     job.tier = verdict.fit.tier;
     job.fit_score = verdict.fit.score;
     job.why = explain(job, verdict.fit);
     job.link_kind = verdict.link.kind;
-    if (!verdict.usable) {
+    if (verdict.usable) {
+      // A role can become usable again — a rule relaxes, or a link is fixed.
+      // Leaving a stale reason behind would keep it hidden forever.
+      delete job.gated_out;
+    } else {
       job.gated_out = verdict.problems.join("; ");
       gatedOut++;
     }
