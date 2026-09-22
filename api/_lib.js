@@ -221,29 +221,30 @@ export async function fetchAll() {
 // --- blob storage -----------------------------------------------------------
 
 export const FEED_PATH = "pipeline/jobs.json";
+export const RUN_LOG_PATH = "pipeline/last-run.json";
 
 // The public base URL of a Blob store is only knowable after something has
 // been written to it, so it cannot be configured up front. Ask the store where
 // the object lives instead — that works on the very first run, when the object
 // does not exist yet and the answer is simply "nowhere".
-async function feedUrl() {
+async function blobUrl(pathname) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return null;
   try {
     const res = await fetch(
-      `https://blob.vercel-storage.com/?prefix=${encodeURIComponent(FEED_PATH)}&limit=1`,
+      `https://blob.vercel-storage.com/?prefix=${encodeURIComponent(pathname)}&limit=1`,
       { headers: { authorization: `Bearer ${token}`, "x-api-version": "7" } }
     );
     if (!res.ok) return null;
     const { blobs } = await res.json();
-    return blobs?.find((b) => b.pathname === FEED_PATH)?.url || null;
+    return blobs?.find((b) => b.pathname === pathname)?.url || null;
   } catch {
     return null;
   }
 }
 
-export async function readFeed() {
-  const url = await feedUrl();
+export async function readBlob(pathname) {
+  const url = await blobUrl(pathname);
   if (!url) return null;
   try {
     // no-store, or we would append to a stale baseline and silently drop
@@ -255,10 +256,18 @@ export async function readFeed() {
   }
 }
 
-export async function writeFeed(feed) {
+export function readFeed() {
+  return readBlob(FEED_PATH);
+}
+
+export function readRunLog() {
+  return readBlob(RUN_LOG_PATH);
+}
+
+export async function writeBlob(pathname, data) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
-  const res = await fetch(`https://blob.vercel-storage.com/${FEED_PATH}`, {
+  const res = await fetch(`https://blob.vercel-storage.com/${pathname}`, {
     method: "PUT",
     headers: {
       authorization: `Bearer ${token}`,
@@ -269,10 +278,18 @@ export async function writeFeed(feed) {
       "x-add-random-suffix": "0",
       "x-cache-control-max-age": "0",
     },
-    body: JSON.stringify(feed),
+    body: JSON.stringify(data),
   });
   if (!res.ok) {
     throw new Error(`blob write failed: ${res.status} ${await res.text()}`);
   }
   return res.json();
+}
+
+export function writeFeed(feed) {
+  return writeBlob(FEED_PATH, feed);
+}
+
+export function writeRunLog(run) {
+  return writeBlob(RUN_LOG_PATH, run);
 }

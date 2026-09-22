@@ -4,8 +4,14 @@
 // that disappears from a job board stays in the feed, because the page's "All"
 // tab is meant to be the complete history and because a stored role may carry
 // a flag the user set.
+//
+// Every run writes a log of itself to Blob, readable at /api/status. That is
+// not decoration: Vercel Cron discards this function's HTTP response, so
+// without a stored log a run where every board timed out is indistinguishable
+// from a healthy one. The previous incarnation of this pipeline failed silently
+// for four days for exactly that reason.
 
-import { fetchAll, jobId, keep, readFeed, writeFeed } from "./_lib.js";
+import { fetchAll, jobId, keep, readFeed, writeFeed, writeRunLog } from "./_lib.js";
 import { SEED } from "./_seed.js";
 
 // Roles found by the ATS sweep get tier 2. Tier 1 means "maps almost
@@ -23,9 +29,22 @@ function unauthorized(req) {
   return got === `Bearer ${expected}` ? null : "bad or missing authorization";
 }
 
+// Persist the outcome, then answer. A failure to store the log must not mask
+// the run's real result, so it is reported rather than thrown.
+async function finish(res, status, run) {
+  try {
+    await writeRunLog(run);
+  } catch (err) {
+    run.run_log_error = err.message;
+  }
+  return res.status(status).json(run);
+}
+
 export default async function handler(req, res) {
   const denied = unauthorized(req);
   if (denied) {
+    // Not logged: an unauthorized caller must not be able to overwrite the
+    // record of the last real run.
     return res.status(401).json({ error: denied });
   }
 
@@ -34,7 +53,8 @@ export default async function handler(req, res) {
   // Fall back to the seed only when no feed exists yet. Once written, Blob is
   // authoritative: re-seeding over a real feed would drop every role the
   // sweep had added and every flag attached to them.
-  const existing = (await readFeed()) || { jobs: SEED };
+  const stored = await readFeed();
+  const existing = stored || { jobs: SEED };
   const byId = new Map(existing.jobs.map((j) => [j.id, j]));
   const before = byId.size;
 
@@ -42,19 +62,25 @@ export default async function handler(req, res) {
   try {
     results = await fetchAll();
   } catch (err) {
-    return res.status(502).json({ error: `ATS sweep failed: ${err.message}` });
+    return finish(res, 502, {
+      ok: false,
+      stage: "ats_sweep",
+      error: err.message,
+      started_at: startedAt,
+      finished_at: new Date().toISOString(),
+    });
   }
 
-  const perSource = [];
+  const sources = [];
   const added = [];
   const today = new Date().toISOString().slice(0, 10);
 
   for (const { platform, board, jobs } of results) {
-    let kept = 0;
+    let matched = 0;
     for (const raw of jobs) {
       if (!raw.url || !raw.title) continue;
       if (!keep(raw)) continue;
-      kept++;
+      matched++;
       const id = jobId(raw.company, raw.url);
       if (byId.has(id)) continue; // already stored, including its flag
       const job = {
@@ -70,8 +96,19 @@ export default async function handler(req, res) {
       byId.set(id, job);
       added.push(job);
     }
-    perSource.push({ platform, board, fetched: jobs.length, matched: kept });
+    sources.push({
+      platform,
+      board,
+      fetched: jobs.length,
+      matched,
+      // A board that returns nothing at all is either a wrong slug or a dead
+      // endpoint. Either way it is doing no work and should be visible as
+      // such, rather than averaging into a plausible-looking total.
+      reachable: jobs.length > 0,
+    });
   }
+
+  const dead = sources.filter((s) => !s.reachable).map((s) => s.board);
 
   const feed = {
     updated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
@@ -82,23 +119,30 @@ export default async function handler(req, res) {
   try {
     await writeFeed(feed);
   } catch (err) {
-    // Report the failure rather than letting a cron run look successful.
-    // A silent non-write is exactly how the previous pipeline went unnoticed
-    // for four days.
-    return res.status(500).json({
+    return finish(res, 500, {
+      ok: false,
+      stage: "feed_write",
       error: err.message,
       would_have_added: added.length,
       started_at: startedAt,
+      finished_at: new Date().toISOString(),
+      sources,
     });
   }
 
-  return res.status(200).json({
+  return finish(res, 200, {
     ok: true,
+    stage: "complete",
     started_at: startedAt,
+    finished_at: new Date().toISOString(),
     updated_at: feed.updated_at,
+    seeded_from_scratch: !stored,
     before,
     after: feed.count,
     added: added.map((j) => `${j.company} — ${j.title}`),
-    sources: perSource,
+    boards_total: sources.length,
+    boards_reachable: sources.length - dead.length,
+    boards_unreachable: dead,
+    sources,
   });
 }
