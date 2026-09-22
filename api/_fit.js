@@ -140,6 +140,20 @@ const INDUSTRY_MISMATCH = [
   { re: /\b(life science|healthcare|clinical|pharma|biotech|medical device)\b/i, why: "life sciences / healthcare industry" },
   { re: /\b(marketing|advertising|creative agency|brand experience)\b/i, why: "marketing / agency industry" },
   { re: /\b(retail store|hospitality|travel|logistics warehouse)\b/i, why: "industry unrelated to his record" },
+  // Added after the first Accenture and PwC sweep. These score full marks on
+  // the title — "Management Consultant", "Strategy Consultant" — while the
+  // industry is nothing like four years of wholesale banking, and a screener
+  // reads the industry first.
+  { re: /\b(manufactur|industry 4\.0|smart factory|mes\b|production line|automotive|industrial|shop ?floor|supply chain planning)\b/i,
+    why: "manufacturing / industrial, no record to show for it" },
+  // "Resources" is what Accenture calls its energy and utilities practice, so
+  // "Resources Industry Consultant" is an energy role that names no energy word.
+  { re: /\b(energy|oil|gas|utilit|downstream|upstream|mining|power grid|renewable|resources industry|natural resources)\b/i,
+    why: "energy / resources, no record to show for it" },
+  { re: /\b(human resources|people (and|&) culture|talent management)\b/i,
+    why: "HR rather than business consulting" },
+  { re: /\b(crm|dynamics 365|customer relationship|martech|campaign management|loyalty platform)\b/i,
+    why: "CRM implementation rather than management consulting" },
 ];
 
 export function scoreFit({ title = "", company = "", why = "", location = "" }) {

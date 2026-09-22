@@ -136,9 +136,22 @@ export const SOURCES = {
     { name: "Xebia", slug: "xebiacee" },
     { name: "VML Enterprise Solutions", slug: "vmlenterprisesolutions" },
     { name: "Wise", slug: "wise" },
+    // Added after a scan of ~70 candidates; each returned postings mentioning
+    // Poland. Stripe and Adyen carry few Poland roles but are payments firms,
+    // which is the one product sector his ACH/NACHA work speaks to directly.
+    { name: "HelloFresh", slug: "hellofresh" },
+    { name: "Stripe", slug: "stripe" },
+    { name: "Adyen", slug: "adyen" },
+    { name: "Datadog", slug: "datadog" },
   ],
   ashby: [
     { name: "Zowie", slug: "zowie" },
+  ],
+  smartrecruiters: [
+    { name: "InPost", slug: "inpost" },
+    { name: "Endava", slug: "endava" },
+    { name: "Delivery Hero", slug: "deliveryhero" },
+    { name: "Allegro", slug: "allegro" },
   ],
   // The consulting firms, on their own systems. These are where his profile
   // actually screens well, and until now their roles only ever reached the
@@ -304,11 +317,31 @@ function relativePostedAt(text) {
   return new Date(Date.now() - daysAgo * day).toISOString();
 }
 
+// SmartRecruiters, unlike Workday, gives a real released date and a fully
+// spelled-out location. It still omits the description from the list response,
+// so the Polish-fluency filter cannot run on these either.
+async function fromSmartRecruiters({ name, slug }) {
+  const data = await getJson(
+    `https://api.smartrecruiters.com/v1/companies/${slug}/postings?limit=100`
+  );
+  if (!data?.content) return [];
+  return data.content.map((j) => ({
+    title: j.name,
+    company: name,
+    url: `https://jobs.smartrecruiters.com/${j.company?.identifier || slug}/${j.id}`,
+    location: j.location?.fullLocation ||
+      [j.location?.city, j.location?.country].filter(Boolean).join(", "),
+    description: "",
+    posted_at: j.releasedDate || null,
+  }));
+}
+
 const FETCHERS = {
   greenhouse: fromGreenhouse,
   lever: fromLever,
   ashby: fromAshby,
   workday: fromWorkday,
+  smartrecruiters: fromSmartRecruiters,
 };
 
 // Every board is queried in parallel; one bad board yields [] rather than
