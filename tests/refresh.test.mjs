@@ -31,14 +31,17 @@ globalThis.fetch = async (url, opts = {}) => {
   if (url.includes("boards-api.greenhouse.io/v1/boards/capco/")) {
     return { ok: true, json: async () => ({ jobs: [
       { title: "Senior Business Analyst", location: { name: "Warsaw, Poland" },
-        absolute_url: "https://example.test/capco/999", content: "English role" },
+        absolute_url: "https://job-boards.greenhouse.io/capco/jobs/999999", content: "English role" },
       { title: "Senior Manager, Delivery", location: { name: "Warsaw, Poland" },
-        absolute_url: "https://example.test/capco/998", content: "" },
+        absolute_url: "https://job-boards.greenhouse.io/capco/jobs/999998", content: "" },
       { title: "Business Analyst", location: { name: "London, UK" },
-        absolute_url: "https://example.test/capco/997", content: "" },
+        absolute_url: "https://job-boards.greenhouse.io/capco/jobs/999997", content: "" },
       { title: "Consultant", location: { name: "Krak\u00f3w, Poland" },
-        absolute_url: "https://example.test/capco/996",
+        absolute_url: "https://job-boards.greenhouse.io/capco/jobs/999996",
         content: "Fluent Polish is required for this role." },
+      // Passes the role filters, but the link is an aggregator: must be refused.
+      { title: "Business Transformation Consultant", location: { name: "Warsaw, Poland" },
+        absolute_url: "https://www.efinancialcareers.com/jobs-Poland-12345", content: "" },
     ]})};
   }
   return { ok: false, status: 404, json: async () => null };
@@ -71,9 +74,11 @@ const auth = { headers: { authorization: "Bearer s3cret" } };
 res = mkRes();
 await refresh(auth, res);
 const r1 = res.body;
-console.log(`3. first run          -> before=${r1.before} after=${r1.after} added=${r1.added.length} ${r1.before === 19 && r1.after === 20 && r1.added.length === 1 ? "PASS" : "FAIL"}`);
+console.log(`3. first run          -> before=${r1.before} after=${r1.after} added=${r1.added.length} ${r1.before === 10 && r1.after === 11 && r1.added.length === 1 ? "PASS" : "FAIL"}`);
 console.log(`   added: ${r1.added[0]}`);
-console.log(`   filters rejected 3 of 4 capco rows: ${r1.sources.find(s=>s.board==="Capco").matched === 1 ? "PASS" : "FAIL"}`);
+console.log(`   role filters kept 2 of 5 capco rows: ${r1.sources.find(s=>s.board==="Capco").matched === 2 ? "PASS" : "FAIL"}`);
+console.log(`   aggregator link refused: ${r1.rejected_count === 1 && /aggregator/.test(r1.rejected[0].why) ? "PASS" : "FAIL"} (${r1.rejected[0]?.why})`);
+console.log(`   tier from fit score: t${r1.added[0]?.slice(1,2)} ${/^t[123] /.test(r1.added[0] || "") ? "PASS" : "FAIL"}`);
 
 // 4. simulate the user flagging a role, then re-running
 feed().jobs.find(j => j.id === "capco-444dbc9e").status = "applying";
@@ -83,7 +88,7 @@ const r2 = res.body;
 const flag = feed().jobs.find(j => j.id === "capco-444dbc9e").status;
 console.log(`4. second run adds 0  -> added=${r2.added.length} ${r2.added.length === 0 ? "PASS" : "FAIL"}`);
 console.log(`5. flag survived      -> status="${flag}" ${flag === "applying" ? "PASS" : "FAIL"}`);
-console.log(`6. count stable       -> ${r2.after} ${r2.after === 20 ? "PASS" : "FAIL"}`);
+console.log(`6. count stable       -> ${r2.after} ${r2.after === 11 ? "PASS" : "FAIL"}`);
 
 // 7. a failing blob write must not report success
 globalThis.fetch = async (url, opts = {}) => {

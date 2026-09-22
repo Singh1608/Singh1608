@@ -12,13 +12,8 @@
 // for four days for exactly that reason.
 
 import { fetchAll, jobId, keep, readFeed, writeFeed, writeRunLog } from "./_lib.js";
+import { assess, explain } from "./_fit.js";
 import { SEED } from "./_seed.js";
-
-// Roles found by the ATS sweep get tier 2. Tier 1 means "maps almost
-// one-to-one onto his experience", which is a judgement this endpoint is not
-// in a position to make — it matches keywords, it does not read a posting.
-// Claiming tier 1 here would put unearned confidence in front of him.
-const SWEEP_TIER = 2;
 
 function unauthorized(req) {
   const expected = process.env.CRON_SECRET;
@@ -73,6 +68,8 @@ export default async function handler(req, res) {
 
   const sources = [];
   const added = [];
+  const rejected = [];
+  const seenNow = new Set();
   const today = new Date().toISOString().slice(0, 10);
 
   for (const { platform, board, jobs } of results) {
@@ -81,17 +78,45 @@ export default async function handler(req, res) {
       if (!raw.url || !raw.title) continue;
       if (!keep(raw)) continue;
       matched++;
+
       const id = jobId(raw.company, raw.url);
-      if (byId.has(id)) continue; // already stored, including its flag
+      seenNow.add(id);
+
+      // Still listed today: refresh liveness without touching anything the
+      // user owns. `status` holds his flag and must never be rewritten here.
+      const already = byId.get(id);
+      if (already) {
+        already.last_seen = today;
+        already.live = true;
+        continue;
+      }
+
+      // Both gates, before anything enters the feed: the link must reach the
+      // employer's own application system, and the role must actually suit
+      // him. A near-miss is not worth a place on a shortlist.
+      const verdict = assess({ ...raw, company: raw.company });
+      if (!verdict.usable) {
+        rejected.push({
+          company: raw.company,
+          title: raw.title,
+          why: verdict.problems.join("; "),
+        });
+        continue;
+      }
+
       const job = {
         id,
         title: raw.title,
         company: raw.company,
         url: raw.url,
-        tier: SWEEP_TIER,
-        why: `Matched on title and Poland location from ${board}'s ${platform} board.`,
+        tier: verdict.fit.tier,
+        fit_score: verdict.fit.score,
+        why: explain(raw, verdict.fit),
+        link_kind: verdict.link.kind,
         status: "new",
         found_at: today,
+        last_seen: today,
+        live: true,
       };
       byId.set(id, job);
       added.push(job);
@@ -106,6 +131,25 @@ export default async function handler(req, res) {
       // such, rather than averaging into a plausible-looking total.
       reachable: jobs.length > 0,
     });
+  }
+
+  // Anything not returned by a board this run is no longer listed. It stays in
+  // the feed — the history is the point, and it may carry a flag — but it is
+  // marked so a dead posting cannot pass for a live one. Only entries from
+  // boards that actually answered are judged, or an unreachable board would
+  // mark its whole roster dead.
+  const answered = new Set(
+    sources.filter((s) => s.reachable).map((s) => s.board)
+  );
+  let wentStale = 0;
+  for (const job of byId.values()) {
+    if (seenNow.has(job.id)) continue;
+    if (!answered.has(job.company)) continue; // board silent; verdict unknown
+    if (job.live !== false) {
+      job.live = false;
+      job.last_seen = job.last_seen ?? job.found_at ?? null;
+      wentStale++;
+    }
   }
 
   const dead = sources.filter((s) => !s.reachable).map((s) => s.board);
@@ -139,7 +183,13 @@ export default async function handler(req, res) {
     seeded_from_scratch: !stored,
     before,
     after: feed.count,
-    added: added.map((j) => `${j.company} — ${j.title}`),
+    added: added.map((j) => `t${j.tier} ${j.company} — ${j.title}`),
+    // Roles the gates turned away, with the reason. Without this the run looks
+    // like it found nothing, when in fact it found things and refused them.
+    rejected_count: rejected.length,
+    rejected: rejected.slice(0, 20),
+    went_stale: wentStale,
+    live_count: [...byId.values()].filter((j) => j.live !== false).length,
     boards_total: sources.length,
     boards_reachable: sources.length - dead.length,
     boards_unreachable: dead,
