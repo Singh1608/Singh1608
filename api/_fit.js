@@ -10,7 +10,7 @@
 //   2. Would this role screen his CV in?
 //      A score, because fit is a matter of degree.
 
-import { excludedByTitle } from "./_lib.js";
+import { excludedByTitle, requiresOtherLanguage } from "./_lib.js";
 
 // --- 1. link legitimacy -----------------------------------------------------
 
@@ -204,6 +204,13 @@ export function assess(job) {
   if (!link.ok) problems.push(`link is ${link.kind} (${link.host})`);
   if (isBoardRoot(job.url, job.title)) problems.push("link is a board root, not a posting");
   if (excludedByTitle(job.title)) problems.push("title is outside his track");
+  // Title only: stored entries carry no description, and the platforms these
+  // roles come from never supplied one. A language requirement is absolute —
+  // he cannot acquire German before applying — so it excludes rather than
+  // deducts, the same way the Polish rule always has.
+  if (requiresOtherLanguage(job.title)) {
+    problems.push("requires a language he does not have");
+  }
   if (fit.tier === 0) problems.push(`fit score ${fit.score} is below the threshold`);
   return { link, fit, usable: problems.length === 0, problems };
 }

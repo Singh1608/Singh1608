@@ -110,12 +110,54 @@ export function requiresPolish(description) {
   return REQUIRES_POLISH.some((k) => d.includes(k));
 }
 
+// Languages he does not have. English is his working language and the reason
+// the whole pipeline filters for English-speaking roles; everything here is a
+// hard screen-out, not a weakness — he cannot acquire German by Tuesday.
+//
+// Arabic is deliberately absent. He works in Dubai and his resume claims no
+// languages either way, so excluding it could drop a role he can actually do,
+// and an Arabic-required role in Poland is vanishingly rare regardless.
+const OTHER_LANGUAGES =
+  "german|french|dutch|flemish|spanish|italian|portuguese|polish|czech|slovak|" +
+  "hungarian|romanian|bulgarian|croatian|serbian|slovenian|norwegian|swedish|" +
+  "danish|finnish|icelandic|russian|ukrainian|turkish|greek|hebrew|japanese|" +
+  "korean|mandarin|chinese";
+
+// The Big Four in Poland advertise language-gated roles as "… with German",
+// which is why three of the top ten on the shortlist were unreachable. Their
+// Workday and SmartRecruiters list APIs return no description, so the title is
+// the only place this can be caught.
+//
+// "\bgerman\b" does not match "Germany": \b needs a non-word character after
+// the match, and "y" is one. A role located in Germany is not a role requiring
+// German, and conflating them would drop legitimate postings.
+const LANGUAGE_REQUIRED = new RegExp(
+  [
+    `\\bwith\\s+(${OTHER_LANGUAGES})\\b`,
+    `\\b(${OTHER_LANGUAGES})[\\s-]speaking\\b`,
+    `\\b(${OTHER_LANGUAGES})\\s+speaker`,
+    `\\b(fluent|native|proficient|advanced)\\s+(${OTHER_LANGUAGES})\\b`,
+    `\\b(${OTHER_LANGUAGES})\\s+(language\\s+)?(required|mandatory|a must)\\b`,
+    `\\(${OTHER_LANGUAGES}\\)`,
+  ].join("|"),
+  "i"
+);
+
+export function requiresOtherLanguage(text) {
+  return LANGUAGE_REQUIRED.test(text || "");
+}
+
 export function keep(job) {
   return (
     matchesLocation(job.location) &&
     matchesRole(job.title) &&
     !excludedByTitle(job.title) &&
-    !requiresPolish(job.description)
+    !requiresPolish(job.description) &&
+    // Both fields: Greenhouse, Lever and Ashby supply a description, so a
+    // requirement buried in the body is caught here even though the stored-role
+    // path in assess() can only see the title.
+    !requiresOtherLanguage(job.title) &&
+    !requiresOtherLanguage(job.description)
   );
 }
 
