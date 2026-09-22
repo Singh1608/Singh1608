@@ -11,7 +11,7 @@
 // from a healthy one. The previous incarnation of this pipeline failed silently
 // for four days for exactly that reason.
 
-import { fetchAll, jobId, keep, readFeed, writeFeed, writeRunLog } from "./_lib.js";
+import { checkAllLive, fetchAll, jobId, keep, readFeed, writeFeed, writeRunLog } from "./_lib.js";
 import { assess, explain } from "./_fit.js";
 import { SEED } from "./_seed.js";
 
@@ -135,6 +135,7 @@ export default async function handler(req, res) {
         link_kind: verdict.link.kind,
         status: "new",
         found_at: today,
+        posted_at: raw.posted_at || null,
         last_seen: today,
         live: true,
       };
@@ -170,6 +171,29 @@ export default async function handler(req, res) {
       job.last_seen = job.last_seen ?? job.found_at ?? null;
       wentStale++;
     }
+  }
+
+  // Actually open every stored link and see what comes back. Board absence
+  // (above) only covers employers we sweep; most of the feed came from
+  // elsewhere, and a 404 is the only honest way to know those are gone.
+  //
+  // This is the one check that cannot be done from the development sandbox,
+  // whose proxy refuses employer sites outright. It runs here because here the
+  // network is real.
+  const urls = [...byId.values()].map((j) => j.url);
+  const checked = await checkAllLive(urls, { concurrency: 8, budgetMs: 20000 });
+  let confirmedDead = 0;
+  let confirmedLive = 0;
+  let uncheckable = 0;
+  for (const job of byId.values()) {
+    const result = checked.get(job.url);
+    if (!result) { uncheckable++; continue; } // ran out of time budget
+    job.http_status = result.status;
+    job.checked_at = today;
+    if (result.redirected_to) job.redirected_to = result.redirected_to;
+    if (result.live === true) { job.live = true; job.last_seen = today; confirmedLive++; }
+    else if (result.live === false) { job.live = false; confirmedDead++; }
+    else uncheckable++; // network error: not evidence either way
   }
 
   const dead = sources.filter((s) => !s.reachable).map((s) => s.board);
@@ -211,6 +235,12 @@ export default async function handler(req, res) {
     regraded,
     gated_out: gatedOut,
     went_stale: wentStale,
+    link_check: {
+      checked: confirmedLive + confirmedDead,
+      live: confirmedLive,
+      dead: confirmedDead,
+      unknown: uncheckable,
+    },
     live_count: [...byId.values()].filter((j) => j.live !== false).length,
     boards_total: sources.length,
     boards_reachable: sources.length - dead.length,

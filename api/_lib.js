@@ -165,6 +165,7 @@ async function fromGreenhouse({ name, slug }) {
     url: j.absolute_url,
     location: j.location?.name || "",
     description: j.content || "",
+    posted_at: j.first_published || j.updated_at || null,
   }));
 }
 
@@ -177,6 +178,8 @@ async function fromLever({ name, slug }) {
     url: j.hostedUrl,
     location: j.categories?.location || "",
     description: j.descriptionPlain || "",
+    // Lever gives epoch milliseconds.
+    posted_at: j.createdAt ? new Date(j.createdAt).toISOString() : null,
   }));
 }
 
@@ -191,6 +194,7 @@ async function fromAshby({ name, slug }) {
     url: j.jobUrl,
     location: j.location || "",
     description: j.descriptionPlain || "",
+    posted_at: j.publishedAt || null,
   }));
 }
 
@@ -292,4 +296,67 @@ export function writeFeed(feed) {
 
 export function writeRunLog(run) {
   return writeBlob(RUN_LOG_PATH, run);
+}
+
+// --- liveness ---------------------------------------------------------------
+//
+// Whether a posting is still open. This runs in the Vercel function because
+// that is the only place in this system with unproxied outbound access — the
+// development sandbox cannot reach employer sites at all.
+//
+// HEAD first, since it is cheap and most ATS hosts answer it. Some reject HEAD
+// with 405 while serving GET perfectly well, so that one case falls through
+// rather than being recorded as dead.
+
+const LIVE_TIMEOUT_MS = 6000;
+
+export async function checkLive(url) {
+  for (const method of ["HEAD", "GET"]) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), LIVE_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method,
+        signal: controller.signal,
+        redirect: "follow",
+        headers: { "user-agent": "poland-pipeline/1.0" },
+      });
+      if (method === "HEAD" && (res.status === 405 || res.status === 501)) continue;
+      // A redirect to a board root is how several ATS hosts retire a posting:
+      // the URL still answers 200, but not with the job.
+      const landed = res.url || url;
+      const retired =
+        /\/(jobs|careers|search|embed)\/?$/i.test(new URL(landed).pathname) &&
+        landed !== url;
+      return {
+        status: res.status,
+        live: res.ok && !retired,
+        redirected_to: landed !== url ? landed : undefined,
+      };
+    } catch (err) {
+      // A timeout or network error is not evidence the job is gone; say so
+      // rather than marking a live posting dead on one bad request.
+      if (method === "GET") return { status: null, live: null, error: err.name || "fetch failed" };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return { status: null, live: null, error: "unreachable" };
+}
+
+// Bounded concurrency: 54 simultaneous requests would trip rate limits and
+// blow the function's time budget.
+export async function checkAllLive(urls, { concurrency = 8, budgetMs = 20000 } = {}) {
+  const started = Date.now();
+  const out = new Map();
+  const queue = [...urls];
+  async function worker() {
+    while (queue.length) {
+      if (Date.now() - started > budgetMs) return; // leave the rest unknown
+      const url = queue.shift();
+      out.set(url, await checkLive(url));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return out;
 }
