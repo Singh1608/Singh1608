@@ -292,7 +292,11 @@ async function fromAshby({ name, slug }) {
 // Two things it does NOT give, which matter downstream:
 //   - a real posting date, only relative prose ("Posted 30+ Days Ago")
 //   - any description, so the Polish-fluency filter cannot run on these
-async function fromWorkday({ name, host, site, tenant, recruiting = false, pages = 4 }) {
+async function fromWorkday({ name, host, site, tenant, recruiting = false, pages = 10 }) {
+  // Ten pages of twenty. At four, every large tenant (State Street, Citi,
+  // Accenture, Rockwool) came back at exactly 80 — the cap, not the count —
+  // and anything past it would have been marked stale on the next run.
+  //
   // Two hosting shapes. Most tenants live on {tenant}.wdN.myworkdayjobs.com and
   // link jobs as /{site}/job/...; some live on wdN.myworkdaysite.com, where the
   // tenant moves into the path. The CXS endpoint is the same for both.

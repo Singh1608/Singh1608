@@ -254,7 +254,147 @@ export async function fromOracle({ name, host, site, pages = 3 }) {
   return out;
 }
 
+// --- Phenom ------------------------------------------------------------------
+// Career sites on the employer's own domain (careers.roche.com, jobs.gsk.com)
+// expose the same search widget the page itself calls. Filtered to Poland
+// server-side. `base` is the site root with its locale path, e.g.
+// "https://careers.roche.com/global/en"; job pages live under it.
+export async function fromPhenom({ name, host, base, lang = "en_global", site = "global" }) {
+  const out = [];
+  for (let from = 0; from < 600; from += 100) {
+    const data = await request(`https://${host}/widgets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        lang, deviceType: "desktop", country: site, pageName: "search-results", ddoKey: "refineSearch",
+        sortBy: "", subsearch: "", from, jobs: true, counts: false, all_fields: ["country"], size: 100,
+        clearAll: false, jdsource: "facets", isSliderEnable: false, pageId: "page11", siteType: "external",
+        keywords: "", global: true, selected_fields: { country: ["Poland"] },
+      }),
+    });
+    const rs = data?.refineSearch;
+    const jobs = rs?.data?.jobs || [];
+    for (const j of jobs) {
+      out.push({
+        title: j.title,
+        company: name,
+        url: `${base || `https://${host}`}/job/${encodeURIComponent(j.jobId)}`,
+        location: joinLoc(j.cityStateCountry || [j.city, j.country].filter(Boolean).join(", "), j.multi_location || []),
+        description: stripHtml(j.descriptionTeaser || ""),
+        posted_at: j.postedDate || j.dateCreated || null,
+      });
+    }
+    if (jobs.length < 100 || out.length >= (rs?.totalHits ?? 0)) break;
+  }
+  return out;
+}
+
+// --- Cornerstone (CSOD) ------------------------------------------------------
+// The career site page carries a short-lived bearer token and the regional API
+// base; both are read fresh on every run.
+function usDate(s) {
+  const m = String(s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? new Date(Date.UTC(+m[3], +m[1] - 1, +m[2])).toISOString() : null;
+}
+
+export async function fromCornerstone({ name, slug, site }) {
+  const page = await request(`https://${slug}.csod.com/ux/ats/careersite/${site}/home?c=${slug}`, { as: "text" });
+  const token = page && (page.match(/"token":"([^"]+)"/) || [])[1];
+  const cloud = page && (page.match(/"cloud":"([^"]+)"/) || [])[1];
+  if (!token || !cloud) return [];
+  const out = [];
+  for (let pageNumber = 1; pageNumber <= 5; pageNumber++) {
+    const data = await request(`${cloud.replace(/\/$/, "")}/rec-job-search/external/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        careerSiteId: Number(site), careerSitePageId: Number(site), pageNumber, pageSize: 100, cultureId: 1,
+        searchText: "", cultureName: "en-US", states: [], countryCodes: [], cities: [], placeID: "", radius: null,
+        postingsWithinDays: null, customFieldCheckboxKeys: [], customFieldDropdowns: [], customFieldRadios: [],
+      }),
+    });
+    const reqs = data?.data?.requisitions || [];
+    for (const j of reqs) {
+      const locs = j.locations || [];
+      out.push({
+        title: j.displayJobTitle,
+        company: name,
+        url: `https://${slug}.csod.com/ux/ats/careersite/${site}/home/requisition/${j.requisitionId}?c=${slug}`,
+        // Country arrives as an ISO code; the feed's location filter reads words.
+        location: joinLoc(locs.map((l) => [l.city, l.country].filter(Boolean).join(", ")),
+          locs.some((l) => l.country === "PL") ? "Poland" : ""),
+        description: stripHtml(j.externalDescription || ""),
+        posted_at: usDate(j.postingEffectiveDate),
+      });
+    }
+    if (reqs.length < 100) break;
+  }
+  return out;
+}
+
+// --- SAP SuccessFactors career sites (RMK) ------------------------------------
+// jobs.gft.com, jobsearch.alstom.com and the like. Server-rendered search
+// results, 25 rows a page, location-filtered by the site itself.
+export async function fromSuccessFactors({ name, host, pages = 8 }) {
+  const out = [];
+  const seen = new Set();
+  for (let p = 0; p < pages; p++) {
+    const html = await request(`https://${host}/search/?q=&locationsearch=Poland&startrow=${p * 25}`, { as: "text" });
+    if (!html) break;
+    const rows = html.split(/class="data-row/).slice(1);
+    let fresh = 0;
+    for (const row of rows) {
+      const a = row.match(/class="jobTitle-link[^"]*"\s+href="([^"]+)"[^>]*>([^<]+)</);
+      if (!a) continue;
+      const url = new URL(a[1].replace(/&amp;/g, "&"), `https://${host}`).href;
+      if (seen.has(url)) continue;
+      seen.add(url);
+      fresh++;
+      const loc = stripHtml((row.match(/class="jobLocation"[^>]*>([\s\S]*?)<\/span>/) || [])[1] || "");
+      const date = stripHtml((row.match(/class="jobDate"[^>]*>([\s\S]*?)<\/span>/) || [])[1] || "");
+      const posted = date && !Number.isNaN(Date.parse(date)) ? new Date(date).toISOString() : null;
+      out.push({
+        title: decodeXml(a[2]).trim(),
+        company: name,
+        url,
+        // The URL path names the city (/job/Katowice-...), which covers rows
+        // whose location cell is rendered client-side.
+        location: joinLoc(loc, decodeURIComponent(new URL(url).pathname).replace(/[-/]/g, " ")),
+        description: "",
+        posted_at: posted,
+      });
+    }
+    if (rows.length < 25 || !fresh) break;
+  }
+  return out;
+}
+
+// --- Jobvite -----------------------------------------------------------------
+export async function fromJobvite({ name, slug }) {
+  const html = await request(`https://jobs.jobvite.com/${slug}/jobs`, { as: "text" });
+  if (!html) return [];
+  const out = [];
+  for (const row of html.split(/<tr\b/).slice(1)) {
+    const a = row.match(/href="(\/[^"]*\/job\/[A-Za-z0-9]+)"[^>]*>([\s\S]*?)<\/a>/);
+    if (!a) continue;
+    const loc = stripHtml((row.match(/jv-job-list-location[^>]*>([\s\S]*?)<\/td>/) || [])[1] || "");
+    out.push({
+      title: stripHtml(a[2]),
+      company: name,
+      url: `https://jobs.jobvite.com${a[1]}`,
+      location: loc,
+      description: "",
+      posted_at: null,
+    });
+  }
+  return out;
+}
+
 export const EXTRA_FETCHERS = {
+  phenom: fromPhenom,
+  cornerstone: fromCornerstone,
+  successfactors: fromSuccessFactors,
+  jobvite: fromJobvite,
   recruitee: fromRecruitee,
   personio: fromPersonio,
   workable: fromWorkable,
