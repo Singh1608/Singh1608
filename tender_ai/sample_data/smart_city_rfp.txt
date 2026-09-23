@@ -1,0 +1,49 @@
+REQUEST FOR PROPOSAL
+Title: Design, Supply, Installation and 5-Year Operation of an Integrated Traffic Management System
+Tender No: MTA/ITMS/2026/042
+Issued by: Metropolitan Transport Authority
+Sector: Smart City / Transport Technology
+Location: Northern Region
+
+1. Introduction
+The Metropolitan Transport Authority invites sealed proposals from eligible bidders for the design, supply, installation, commissioning and five-year operation and maintenance of an Integrated Traffic Management System covering 180 signalised junctions. The system shall include adaptive signal control, automatic number plate recognition and a central command centre.
+
+2. Key Information
+Estimated contract value: USD 12.5 million
+Bid security (EMD): USD 250,000 in the form of a bank guarantee
+Contract period: 18 months implementation followed by 60 months O&M; contract duration 78 months
+Pre-bid meeting: {PREBID}
+Last date for submission of bids: {DEADLINE}
+Bid opening: {OPENING}
+
+3. Scope of Work
+- Supply and installation of adaptive traffic signal controllers at 180 junctions
+- ANPR and red-light violation detection cameras at 60 locations
+- Central Integrated Command and Control Centre with video wall
+- Fibre-optic network connectivity and data centre hosting
+- Five years of comprehensive operation and maintenance with 99.5% uptime SLA
+- Training of 120 authority staff
+
+4. Eligibility Criteria
+4.1 The bidder shall have an average annual turnover of not less than USD 20 million over the last three financial years.
+4.2 Net worth of at least USD 5 million as of the last audited balance sheet.
+4.3 The bidder shall have at least 7 years of experience in intelligent transport systems.
+4.4 At least one similar project of value not less than USD 6 million completed in the last seven years.
+4.5 The bidder must hold valid ISO 9001:2015, ISO 27001:2022 and CMMI Level 3 certifications.
+
+5. Evaluation
+Proposals will be evaluated on Quality and Cost Based Selection (QCBS) with 70:30 technical:financial weightage. Minimum technical score to qualify is 70.
+
+6. Commercial Terms
+6.1 Performance bank guarantee of 10% of contract value valid until 90 days after the O&M period.
+6.2 Mobilisation advance of 10% against bank guarantee.
+6.3 Payment will be released within 90 days of acceptance of milestone invoices.
+6.4 Retention of 5% of each running bill until completion of the defect liability period.
+6.5 Liquidated damages at 0.5% per week of delay, subject to a maximum of 10% of contract value.
+6.6 The contract price is a fixed price and shall not be subject to any escalation or price variation.
+
+7. Legal
+7.1 The contractor shall indemnify the Authority against any and all losses, including indirect and consequential losses, arising from the performance of the contract.
+7.2 The Authority may terminate the contract for its convenience with 30 days' notice.
+7.3 All intellectual property in software developed under this contract shall vest in the Authority.
+7.4 Non-performance may lead to blacklisting of the contractor for three years.
