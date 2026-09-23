@@ -145,23 +145,53 @@ async function collectLinkedIn() {
       await sleep(150);
     }
   });
-  const withLi = [...emp.values()].filter((e) => e.li.size && !e.websites.size);
-  await pool(withLi, 4, async (e) => {
-    const page = [...e.li][0];
-    let r = await get(page);
-    if (r.status === 429) { await sleep(8000); r = await get(page); }
-    const m = r.text.match(/data-tracking-control-name="about_website"[^>]*href="([^"]+)"/) ||
-              r.text.match(/href="([^"]+)"[^>]*data-tracking-control-name="about_website"/);
-    if (m) {
-      let site = m[1].replace(/&amp;/g, "&");
-      if (site.includes("linkedin.com/redir")) {
-        try { site = new URL(site).searchParams.get("url") || site; } catch { /* keep */ }
+  // Company pages would give each employer's website, but LinkedIn answers
+  // them with 429 after a few dozen, and backing off per page outlived the
+  // sandbox. Websites for LinkedIn-only employers come from resolveDomains().
+  console.log(`linkedin: ${seen} cards`);
+}
+
+// --- website resolution for employers no source gave a site for ------------
+
+const STRIP_WORDS = /\b(sp\.?\s*z\s*o\.?\s*o\.?|s\.?a\.?|sp\.?\s*k\.?|gmbh|ltd|limited|inc|llc|llp|bv|nv|poland|polska|group|holding|international|global|services|solutions|technologies|technology|consulting|company|kft|ag)\b\.?/gi;
+
+function nameLike(candidate, wanted) {
+  const a = norm(candidate);
+  const b = norm(String(wanted).replace(STRIP_WORDS, " "));
+  if (a.length < 3 || b.length < 3) return false;
+  return a === b || a.startsWith(b) || b.startsWith(a) || (b.length >= 5 && a.includes(b));
+}
+
+async function resolveDomains() {
+  const need = [...emp.values()].filter((e) => !e.websites.size && !e.applyUrls.size);
+  let viaClearbit = 0;
+  let viaGuess = 0;
+  await pool(need, 8, async (e) => {
+    const q = e.name.replace(STRIP_WORDS, " ").replace(/\s+/g, " ").trim() || e.name;
+    // Clearbit's autocomplete maps a name to a domain, but loosely: "Sii"
+    // returns Chile's tax office and "KPMG" returns kpmg.ca. A suggestion is
+    // taken only when its own name matches the employer.
+    const r = await get(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(q)}`);
+    let hits = [];
+    try { hits = JSON.parse(r.text); } catch { /* none */ }
+    const hit = Array.isArray(hits) ? hits.find((h) => nameLike(h.name, e.name)) : null;
+    if (hit?.domain) { e.websites.add(`https://${hit.domain}`); viaClearbit++; return; }
+    // Fallback: the obvious domains, accepted only if the homepage title names
+    // the employer — a parked or unrelated site at that address is rejected.
+    const base = norm(q);
+    if (base.length < 3) return;
+    for (const tld of ["pl", "com", "eu"]) {
+      const g = await get(`https://${base}.${tld}`, { timeout: 8000 });
+      if (!g.ok) continue;
+      const title = (g.text.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "";
+      if (nameLike(title.replace(/\s*[-|–:].*$/, ""), q) || norm(title).includes(base)) {
+        e.websites.add(g.url);
+        viaGuess++;
+        return;
       }
-      e.websites.add(site);
     }
-    await sleep(300);
   });
-  console.log(`linkedin: ${seen} cards, ${withLi.length} company pages read`);
+  console.log(`domains: ${need.length} needed, ${viaClearbit} via clearbit, ${viaGuess} via verified guess`);
 }
 
 // --- 3. justjoin.it ---------------------------------------------------------
@@ -349,14 +379,19 @@ async function trace(e) {
 const phase = process.argv[2] || "collect";
 
 if (phase === "collect") {
-  await collectNoFluffJobs();
-  await collectLinkedIn();
-  await collectJustJoin();
-  const list = [...emp.values()].map((e) => ({
-    name: e.name, sources: [...e.sources], websites: [...e.websites], applyUrls: [...e.applyUrls],
-  }));
-  writeFileSync("/w/employers.json", JSON.stringify(list));
-  console.log(`${list.length} distinct employers written`);
+  // Checkpoint after every source, so a sandbox that dies mid-collection still
+  // leaves everything gathered up to that point.
+  const save = (stage) => {
+    const list = [...emp.values()].map((e) => ({
+      name: e.name, sources: [...e.sources], websites: [...e.websites], applyUrls: [...e.applyUrls],
+    }));
+    writeFileSync("/w/employers.json", JSON.stringify(list));
+    console.log(`[${stage}] ${list.length} employers saved`);
+  };
+  await collectNoFluffJobs(); save("nofluffjobs");
+  await collectLinkedIn(); save("linkedin");
+  await collectJustJoin(); save("justjoin");
+  await resolveDomains(); save("domains");
   process.exit(0);
 }
 
