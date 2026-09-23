@@ -185,6 +185,13 @@ export const SOURCES = {
     { name: "Stripe", slug: "stripe" },
     { name: "Adyen", slug: "adyen" },
     { name: "Datadog", slug: "datadog" },
+    // Found by tools/discover_boards.mjs, which reads the aggregators for
+    // EMPLOYER NAMES only and then looks for that employer's own board. Duco is
+    // the single verified result from a sweep of 231 employers: its Greenhouse
+    // board declares "Duco" and carries a Wroclaw office. Reconciliation and
+    // data automation for financial services — the closest thing in the feed to
+    // the ACH/NACHA work at Deloitte.
+    { name: "Duco", slug: "duco" },
   ],
   ashby: [
     { name: "Zowie", slug: "zowie" },
