@@ -12,3 +12,7 @@ README.md
 # The tender_ai service is a separate FastAPI app, deployed on its own (see
 # tender_ai/README.md), not part of the static Vercel site.
 tender_ai/
+
+# Discovery and verification scripts, run in sandboxes, not part of the site.
+tools/
+.work/

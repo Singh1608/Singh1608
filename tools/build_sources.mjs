@@ -1,7 +1,7 @@
 // Turn the trace (tools/trace_employers.mjs) into SOURCES entries, keeping only
 // boards the PRODUCTION adapters can read and that carry roles in Poland today.
 //
-//   node tools/build_sources.mjs /w/trace.json > /w/sources.json
+//   node tools/build_sources.mjs > .work/sources.json   (reads .work/trace.json)
 //
 // Every candidate is fetched with the same code the nightly refresh runs. A
 // board is kept only when it returns at least one posting the feed's location
@@ -12,6 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import { FETCHERS, keep, matchesLocation, SOURCES } from "../api/_lib.js";
+import { workPath } from "./_workdir.mjs";
 
 const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const LEGAL = /\b(sp\.?\s*z\s*o\.?\s*o\.?|s\.?\s?a\.?|sp\.?\s*k\.?|sp\.?\s*j\.?|spółka.*|gmbh|ltd\.?|limited|inc\.?|llc|llp|b\.?v\.?|n\.?v\.?|ag|kft\.?|oddział.*)$/i;
@@ -97,7 +98,7 @@ function candidates(rec) {
   return out;
 }
 
-const records = JSON.parse(readFileSync(process.argv[2] || "/w/trace.json", "utf8"));
+const records = JSON.parse(readFileSync(process.argv[2] || workPath("trace.json"), "utf8"));
 const byKey = new Map();
 for (const rec of records) {
   for (const c of candidates(rec)) {

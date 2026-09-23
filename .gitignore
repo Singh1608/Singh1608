@@ -14,3 +14,6 @@ results.csv
 resume/
 tools/build_experience_master.py
 .claude/agents/
+
+# Intermediate output from tools/ — discovery data, never committed.
+.work/

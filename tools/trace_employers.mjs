@@ -10,13 +10,14 @@
 // produced 8 false positives in 11: here the evidence comes from the
 // employer's own site.
 //
-// Output: /w/trace.json — one record per employer with every ATS reference
+// Output: .work/trace.json — one record per employer with every ATS reference
 // found and the page it was found on. Verification against each platform's
 // API is a separate step (tools/verify_boards.mjs).
 //
 // Runs from a Vercel sandbox; the dev proxy refuses all of these hosts.
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { workPath } from "./_workdir.mjs";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -370,11 +371,11 @@ async function trace(e) {
 // minutes whatever timeout is requested, and the first all-in-one run died
 // with everything still in memory.
 //
-//   node trace_employers.mjs collect   -> /w/employers.json
-//   node trace_employers.mjs trace     -> appends /w/traced.jsonl, one line
+//   node tools/trace_employers.mjs collect   -> .work/employers.json
+//   node tools/trace_employers.mjs trace     -> appends .work/traced.jsonl, one line
 //                                         per employer, skipping any already
 //                                         there — so it resumes after a restart
-//   node trace_employers.mjs report    -> /w/trace.json + summary
+//   node tools/trace_employers.mjs report    -> .work/trace.json + summary
 
 const phase = process.argv[2] || "collect";
 
@@ -385,7 +386,7 @@ if (phase === "collect") {
     const list = [...emp.values()].map((e) => ({
       name: e.name, sources: [...e.sources], websites: [...e.websites], applyUrls: [...e.applyUrls],
     }));
-    writeFileSync("/w/employers.json", JSON.stringify(list));
+    writeFileSync(workPath("employers.json"), JSON.stringify(list));
     console.log(`[${stage}] ${list.length} employers saved`);
   };
   await collectNoFluffJobs(); save("nofluffjobs");
@@ -396,10 +397,10 @@ if (phase === "collect") {
 }
 
 if (phase === "trace") {
-  const list = JSON.parse(readFileSync("/w/employers.json", "utf8"));
+  const list = JSON.parse(readFileSync(workPath("employers.json"), "utf8"));
   const done = new Set(
-    existsSync("/w/traced.jsonl")
-      ? readFileSync("/w/traced.jsonl", "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).name)
+    existsSync(workPath("traced.jsonl"))
+      ? readFileSync(workPath("traced.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l).name)
       : []
   );
   const todo = list.filter((e) => !done.has(e.name));
@@ -413,15 +414,15 @@ if (phase === "trace") {
     // match can be traced back to the page that produced it.
     rec.ats = rec.ats.map((a) => ({ ...a, where: String(a.where).slice(0, 200) }));
     rec.pages = rec.pages.slice(0, 6);
-    appendFileSync("/w/traced.jsonl", JSON.stringify(rec) + "\n");
+    appendFileSync(workPath("traced.jsonl"), JSON.stringify(rec) + "\n");
     if (++n % 50 === 0) console.log(`  traced ${n}/${todo.length}`);
   });
   console.log("trace complete");
   process.exit(0);
 }
 
-const records = readFileSync("/w/traced.jsonl", "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
-writeFileSync("/w/trace.json", JSON.stringify(records));
+const records = readFileSync(workPath("traced.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+writeFileSync(workPath("trace.json"), JSON.stringify(records));
 
 const byPlatform = {};
 for (const r of records) for (const p of new Set(r.ats.map((a) => a.p))) byPlatform[p] = (byPlatform[p] || 0) + 1;

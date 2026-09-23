@@ -2,7 +2,7 @@
 // PRODUCTION adapters from api/_lib.js — so a board passes only if the code
 // that will run in the nightly refresh can actually read it.
 //
-//   node tools/verify_boards.mjs /w/trace.json > /w/verified.json
+//   node tools/verify_boards.mjs > .work/verified.json   (reads .work/trace.json)
 //
 // For each board it records:
 //   jobs      — postings the adapter returned
@@ -17,6 +17,7 @@
 
 import { readFileSync } from "node:fs";
 import { FETCHERS, keep, matchesLocation } from "../api/_lib.js";
+import { workPath } from "./_workdir.mjs";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -82,7 +83,7 @@ function toBoard(ref, rec) {
   }
 }
 
-const records = JSON.parse(readFileSync(process.argv[2] || "/w/trace.json", "utf8"));
+const records = JSON.parse(readFileSync(process.argv[2] || workPath("trace.json"), "utf8"));
 const tasks = [];
 const unsupported = {};
 const seen = new Set();
