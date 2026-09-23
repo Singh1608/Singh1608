@@ -20,6 +20,13 @@
 // matching roles are kept on purpose — they have Poland openings in adjacent
 // functions and the next posting may be his.
 //
+// A second pass covered the 656 employers whose homepage linked no ATS at
+// all. With no page to read, it probed the name-declaring platforms
+// (Greenhouse, SmartRecruiters, Workable, Recruitee, Teamtailor, Personio)
+// and accepted a board only when the platform's own declared company name
+// matched the employer exactly — the check that slug guessing alone lacked.
+// Those entries are marked "name-verified" below.
+//
 // Not included, and why:
 //   - the same postings twice: HelloFresh's Phenom site (already read through
 //     Greenhouse), State Street / U.S. Bank / Thermo Fisher on Phenom (their
@@ -27,8 +34,13 @@
 //     McLennan Workday site and a second Northmill career site
 //   - internal career sites (Novartis "Internal_Careers_for_Acquired_…"),
 //     which only existing employees can apply through
-//   - eRecruiter, Avature, iCIMS and Taleo employers — no public listing
-//     endpoint found yet; see tools/trace_employers.mjs output
+//   - eRecruiter employers (BNP Paribas, KPMG, Bank Pocztowy, UNIQA, ORLEN and
+//     26 more): eRecruiter publishes offers and application forms but no
+//     listing endpoint. BNP's own careers site loads its list from a private
+//     API that requires a client key; that was not worked around.
+//   - Avature, iCIMS and Taleo employers (Deloitte, Aon, Goldman Sachs): no
+//     public listing endpoint found, and several references turned out to be
+//     script hosts or other companies' sites rather than boards
 
 export const DISCOVERED = {
   ashby: [
@@ -51,6 +63,14 @@ export const DISCOVERED = {
     { name: "Simon-Kucher", slug: "simon-kucher", site: "6" }, // PL 21, matching 1
   ],
   greenhouse: [
+    { name: "Asana", slug: "asana" }, // name-verified, PL 14
+    { name: "Flix", slug: "flix" }, // name-verified, PL 18
+    { name: "Fluxon", slug: "fluxon" }, // name-verified, PL 5
+    { name: "GR8 Tech", slug: "gr8tech" }, // name-verified, PL 2
+    { name: "N-iX", slug: "nix" }, // name-verified, PL 16
+    { name: "OKX", slug: "okx" }, // name-verified, PL 2
+    { name: "project44", slug: "project44" }, // name-verified, PL 5
+    { name: "Verkada", slug: "verkada" }, // name-verified, PL 4
     { name: "Altman Solon", slug: "altmansolonuslp" }, // PL 2, matching 0
     { name: "Cognism", slug: "cognism" }, // PL 7, matching 0
     { name: "Iterative Health", slug: "iterativehealth" }, // PL 3, matching 0
@@ -96,6 +116,14 @@ export const DISCOVERED = {
     { name: "SkyCell", slug: "skycellag" }, // PL 5, matching 3
   ],
   smartrecruiters: [
+    { name: "Evolution", slug: "evolution" }, // name-verified, PL 1
+    { name: "Gcore", slug: "gcore" }, // name-verified, PL 10
+    { name: "Gerresheimer", slug: "gerresheimer" }, // name-verified, PL 5
+    { name: "Infinity Quest", slug: "infinityquest" }, // name-verified, PL 4
+    { name: "NielsenIQ", slug: "nielseniq" }, // name-verified, PL 8
+    { name: "SGS", slug: "sgs" }, // name-verified, PL 1
+    { name: "Software Mind", slug: "softwaremind" }, // name-verified, PL 27
+    { name: "Wabtec", slug: "wabtec" }, // name-verified, PL 2
     { name: "Bosch", slug: "BoschGroup" }, // PL 2, matching 0
     { name: "EcoVadis", slug: "ecovadis" }, // PL 6, matching 1
     { name: "Salomon (Amer Sports)", slug: "Salomon" }, // PL 3, matching 0
@@ -106,6 +134,13 @@ export const DISCOVERED = {
     { name: "Westinghouse Electric", host: "careers.westinghousenuclear.com" }, // PL 54, matching 1
   ],
   teamtailor: [
+    { name: "3Shape", slug: "3shape" }, // name-verified, PL 22
+    { name: "CodiLime", slug: "codilime" }, // name-verified, PL 32
+    { name: "Directio", slug: "directio" }, // name-verified, PL 12
+    { name: "IPF Digital", slug: "ipfdigital" }, // name-verified, PL 10
+    { name: "Mutares", slug: "mutares" }, // name-verified, PL 2
+    { name: "Onwelo", slug: "onwelo" }, // name-verified, PL 192
+    { name: "Volue", slug: "volue" }, // name-verified, PL 2
     { name: "Avenga", host: "career.avenga.com" }, // PL 12, matching 1
     { name: "Evotym", host: "careers.evotym.com" }, // PL 14, matching 0
     { name: "IQM Quantum Computers", slug: "iqm" }, // PL 2, matching 0
