@@ -9,6 +9,7 @@
 // not through @vercel/blob.
 
 import { createHash } from "node:crypto";
+import { EXTRA_FETCHERS } from "./_adapters.js";
 
 // --- identity ---------------------------------------------------------------
 
@@ -255,8 +256,8 @@ async function fromGreenhouse({ name, slug }) {
   }));
 }
 
-async function fromLever({ name, slug }) {
-  const data = await getJson(`https://api.lever.co/v0/postings/${slug}?mode=json`);
+async function fromLever({ name, slug, eu = false }) {
+  const data = await getJson(`https://api.${eu ? "eu." : ""}lever.co/v0/postings/${slug}?mode=json`);
   if (!Array.isArray(data)) return [];
   return data.map((j) => ({
     title: j.text,
@@ -291,7 +292,13 @@ async function fromAshby({ name, slug }) {
 // Two things it does NOT give, which matter downstream:
 //   - a real posting date, only relative prose ("Posted 30+ Days Ago")
 //   - any description, so the Polish-fluency filter cannot run on these
-async function fromWorkday({ name, host, site, tenant, pages = 4 }) {
+async function fromWorkday({ name, host, site, tenant, recruiting = false, pages = 4 }) {
+  // Two hosting shapes. Most tenants live on {tenant}.wdN.myworkdayjobs.com and
+  // link jobs as /{site}/job/...; some live on wdN.myworkdaysite.com, where the
+  // tenant moves into the path. The CXS endpoint is the same for both.
+  const jobBase = recruiting
+    ? `https://${host}/recruiting/${tenant}/${site}`
+    : `https://${host}/${site}`;
   const out = [];
   for (let page = 0; page < pages; page++) {
     const controller = new AbortController();
@@ -330,7 +337,7 @@ async function fromWorkday({ name, host, site, tenant, pages = 4 }) {
       out.push({
         title: j.title,
         company: name,
-        url: `https://${host}/${site}${j.externalPath}`,
+        url: `${jobBase}${j.externalPath}`,
         // The city sits in the path (/job/Warsaw/...) and often in bulletFields;
         // locationsText says "3 Locations" when there are several, which names
         // no city at all, so the path is the more reliable of the three.
@@ -385,12 +392,14 @@ async function fromSmartRecruiters({ name, slug }) {
   }));
 }
 
-const FETCHERS = {
+export const FETCHERS = {
   greenhouse: fromGreenhouse,
   lever: fromLever,
   ashby: fromAshby,
   workday: fromWorkday,
   smartrecruiters: fromSmartRecruiters,
+  // Platforms found by tracing aggregator employers to their own careers pages.
+  ...EXTRA_FETCHERS,
 };
 
 // Every board is queried in parallel; one bad board yields [] rather than
