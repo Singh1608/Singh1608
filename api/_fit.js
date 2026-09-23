@@ -11,6 +11,7 @@
 //      A score, because fit is a matter of degree.
 
 import { excludedByTitle, requiresOtherLanguage } from "./_lib.js";
+import { DISCOVERED } from "./_discovered.js";
 
 // --- 1. link legitimacy -----------------------------------------------------
 
@@ -23,6 +24,9 @@ const FIRST_PARTY_ATS = [
   "icims.com", "taleo.net", "successfactors.com", "oraclecloud.com",
   "eightfold.ai", "avature.net", "workable.com", "jobvite.com",
   "bamboohr.com", "phenompeople.com", "brassring.com", "csod.com",
+  // Added with the traced boards. "lever.co" covers the EU host
+  // (jobs.eu.lever.co), which "jobs.lever.co" does not match.
+  "lever.co", "personio.com", "traffit.com", "breezy.hr", "pinpointhq.com",
 ];
 
 // Employer career domains that the company-name heuristic misses — short
@@ -33,6 +37,11 @@ const KNOWN_EMPLOYER_HOSTS = [
   "apply.deloitte.com", "careers.bcg.com", "talent.bain.com",
   "mckinsey.com", "careers.mastercard.com", "accenture.com",
   "jobs.kpmg.com", "careers.pwc.com", "jobs.ey.com",
+  // Every employer-domain career site among the traced boards (Phenom,
+  // SuccessFactors, Teamtailor on the employer's own host). Without this,
+  // three-letter names defeat the stem check below — jobs.gft.com and
+  // jobs.gsk.com would be judged "unknown" and their roles hidden.
+  ...Object.values(DISCOVERED).flat().map((b) => b.host).filter((h) => h && !/myworkday|oraclecloud/.test(h)),
 ];
 
 // Job boards and aggregators. Every one of these was found in the feed or is
@@ -60,8 +69,14 @@ export function isBoardRoot(url, title) {
   try {
     const { pathname, search } = new URL(url);
     const segments = pathname.split("/").filter(Boolean);
+    if (search) return false;
     // e.g. job-boards.greenhouse.io/xebiacee  -> board, no job id
-    if (!search && segments.length <= 2 && !/\d{4,}/.test(pathname)) return true;
+    if (segments.length <= 1) return true;
+    // A two-segment path is a board only when its last part is a listing
+    // word. The earlier rule — "two segments and no run of four digits" —
+    // also caught real postings whose ids are short or alphanumeric:
+    // Workable /j/8F2A1C3D9E, Recruitee /o/business-analyst, Breezy /p/a1b2c3.
+    if (segments.length === 2 && /^(jobs?|careers?|openings|positions|search|vacancies|praca|kariera)$/i.test(segments[1])) return true;
   } catch {
     return false;
   }

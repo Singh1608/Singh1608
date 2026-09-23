@@ -10,6 +10,7 @@
 
 import { createHash } from "node:crypto";
 import { EXTRA_FETCHERS } from "./_adapters.js";
+import { DISCOVERED } from "./_discovered.js";
 
 // --- identity ---------------------------------------------------------------
 
@@ -75,6 +76,17 @@ const EXCLUDE_TITLE_KEYWORDS = [
   "machine learning", "data science", "cloud", "platform",
   "qa", "tester", "quality assurance", "frontend", "backend", "fullstack",
   "full stack", "salesforce", "sap", "servicenow",
+  // Programming stacks. Added with the traced boards: GFT alone listed 46
+  // roles passing every other filter, most of them "Expert iOS Consultant",
+  // "Java Consultant" and the like — technical delivery behind a consulting
+  // title, the same shape as the IAM roles above. Deliberately absent: SQL and
+  // Python, which are on his CV and appear in analyst titles he can do; and
+  // "swift" and "embedded", which in banking mean the SWIFT payments network
+  // and embedded finance — both squarely his territory, not a language.
+  "ios", "android", "java", "javascript", "typescript", "golang", "kotlin",
+  "scala", "ruby", "php", "react", "angular", "node.js", "dotnet",
+  "mainframe", "cobol", "abap", "firmware", "kubernetes",
+  "terraform", "flutter", "unity",
 ];
 
 // Postings that say Polish is required. He does not speak it, so these are
@@ -221,6 +233,13 @@ export const SOURCES = {
     },
   ],
 };
+
+// Boards found by tracing aggregator employers to their own careers pages.
+// Kept in their own module because they are generated and verified by
+// tools/build_sources.mjs, while the entries above were chosen by hand.
+for (const [platform, boards] of Object.entries(DISCOVERED)) {
+  SOURCES[platform] = [...(SOURCES[platform] || []), ...boards];
+}
 
 const TIMEOUT_MS = 8000;
 
