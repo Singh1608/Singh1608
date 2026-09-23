@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tender AI</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f2; --surface: #fcfcfb; --border: #e2e1dc;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #7a7974;
+  --accent: #2a78d6; --series-1: #2a78d6; --grid: #e8e7e2;
+  --good: #1a7f37; --warn: #9a6700; --bad: #c62828;
+  --good-bg: #e6f4ea; --warn-bg: #fff4d6; --bad-bg: #fde8e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --border: #33332f;
+    --text: #ffffff; --text-2: #c3c2b7; --muted: #8f8e86;
+    --accent: #3987e5; --series-1: #3987e5; --grid: #2a2a27;
+    --good: #5fd07a; --warn: #f0b93a; --bad: #ff7b7b;
+    --good-bg: #16301d; --warn-bg: #33290f; --bad-bg: #3a1818;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --border: #33332f;
+  --text: #ffffff; --text-2: #c3c2b7; --muted: #8f8e86;
+  --accent: #3987e5; --series-1: #3987e5; --grid: #2a2a27;
+  --good: #5fd07a; --warn: #f0b93a; --bad: #ff7b7b;
+  --good-bg: #16301d; --warn-bg: #33290f; --bad-bg: #3a1818;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+header h1 { font-size: 17px; margin: 0; }
+main { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 820px) { main { grid-template-columns: minmax(0, 1fr); } }
+main > section { min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2); margin: 0 0 10px; }
+input, textarea, select, button { font: inherit; color: var(--text); }
+input, textarea, select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 120px; resize: vertical; }
+button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button:disabled { opacity: .5; cursor: default; }
+label { display: block; font-size: 12px; color: var(--text-2); margin: 8px 0 3px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.row > * { flex: 1 1 140px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.tile .k { font-size: 12px; color: var(--text-2); }
+.tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { padding: 8px 6px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 6px; }
+.list li:hover, .list li.active { background: var(--bg); }
+.list .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .m { font-size: 12px; color: var(--text-2); }
+.pill { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-2); }
+.badge { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+.badge.good { color: var(--good); background: var(--good-bg); }
+.badge.warn { color: var(--warn); background: var(--warn-bg); }
+.badge.bad { color: var(--bad); background: var(--bad-bg); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-2); font-weight: 500; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+.muted { color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.chart { position: relative; }
+.chart svg { width: 100%; height: 220px; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); display: none; white-space: nowrap; }
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface);
+  padding: 8px 14px; border-radius: 8px; display: none; max-width: calc(100% - 32px); }
+.empty { text-align: center; padding: 40px 10px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tender AI <span class="muted" style="font-weight:400">· Tender analysis &amp; procurement</span></h1>
+  <div class="row" style="flex:0 1 460px">
+    <input id="apikey" type="password" placeholder="X-API-Key (e.g. demo-bid_manager-key)" aria-label="API key">
+    <button id="connect" style="flex:0 0 auto">Connect</button>
+    <span id="who" class="muted" style="flex:0 0 auto"></span>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="card"><h2>Pipeline</h2><div id="kpis" class="tiles"></div></div>
+    <div class="card">
+      <h2>Tenders</h2>
+      <select id="statusFilter" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option>INTAKE</option><option>ANALYZED</option><option>PRICING</option>
+        <option>PENDING_APPROVAL</option><option>APPROVED</option><option>SUBMITTED</option>
+        <option>WON</option><option>LOST</option><option>NO_BID</option><option>WITHDRAWN</option>
+      </select>
+      <ul id="tenders" class="list" style="margin-top:8px"></ul>
+    </div>
+    <div class="card">
+      <h2>New tender</h2>
+      <label for="newText">Paste tender text</label>
+      <textarea id="newText" placeholder="Full RFP / ITT text…"></textarea>
+      <label for="newFile">…or upload .pdf / .txt</label>
+      <input id="newFile" type="file" accept=".pdf,.txt,.md">
+      <div style="margin-top:10px"><button id="create">Analyse tender</button></div>
+    </div>
+  </section>
+
+  <section id="detail"><div class="card empty">Connect with an API key, then select or create a tender.</div></section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (v, cur = "") => v == null ? "—" : `${cur} ${Number(v).toLocaleString(undefined, {maximumFractionDigits: 0})}`.trim();
+const compact = (v) => v == null ? "—" : Intl.NumberFormat(undefined, {notation: "compact", maximumFractionDigits: 1}).format(v);
+const pct = (v, d = 0) => v == null ? "—" : `${(v * 100).toFixed(d)}%`;
+let KEY = "", ME = null, CURRENT = null;
+try { KEY = localStorage.getItem("tenderai.key") || ""; } catch {}
+$("#apikey").value = KEY;
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 4000); }
+
+async function api(path, opts = {}) {
+  const headers = {"X-API-Key": KEY, ...(opts.body && !(opts.body instanceof FormData) ? {"Content-Type": "application/json"} : {})};
+  const r = await fetch(path, {...opts, headers});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || r.statusText));
+  return data;
+}
+
+async function connect() {
+  KEY = $("#apikey").value.trim();
+  try { localStorage.setItem("tenderai.key", KEY); } catch {}
+  try {
+    ME = await api("/api/v1/me");
+    $("#who").textContent = `${ME.name} · ${ME.role}`;
+    await Promise.all([loadKpis(), loadList()]);
+  } catch (e) { $("#who").textContent = ""; toast(e.message); }
+}
+
+async function loadKpis() {
+  const d = await api("/api/v1/dashboard");
+  const at = d.upcoming_deadlines.filter((u) => u.at_risk).length;
+  $("#kpis").innerHTML = [
+    ["Active pipeline", compact(d.active_pipeline_value)],
+    ["Probability-weighted", compact(d.probability_weighted_pipeline)],
+    ["Win rate", d.win_rate == null ? "—" : pct(d.win_rate)],
+    ["Due ≤ 21 days", `${d.upcoming_deadlines.length}${at ? ` <span class="badge bad" style="font-size:11px">⚠ ${at} at risk</span>` : ""}`],
+  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+}
+
+async function loadList() {
+  const s = $("#statusFilter").value;
+  const rows = await api(`/api/v1/tenders${s ? `?status=${s}` : ""}`);
+  $("#tenders").innerHTML = rows.length ? rows.map((t) => `
+    <li data-id="${t.id}" class="${CURRENT === t.id ? "active" : ""}">
+      <div class="t">${esc(t.title)}</div>
+      <div class="m"><span class="pill">${esc(t.status)}</span> ${esc(t.buyer || "")}
+        ${t.submission_deadline ? ` · due ${esc(t.submission_deadline.slice(0, 10))}` : ""}</div>
+    </li>`).join("") : `<li class="muted">No tenders</li>`;
+  document.querySelectorAll("#tenders li[data-id]").forEach((li) => li.onclick = () => openTender(+li.dataset.id));
+}
+
+const DECISION = {BID: ["good", "✓", "Bid"], REVIEW: ["warn", "!", "Committee review"], NO_BID: ["bad", "✕", "No bid"]};
+const STATUS = {PASS: ["good", "✓ Pass"], FAIL: ["bad", "✕ Fail"], NOT_STATED: ["warn", "– Not stated"]};
+
+async function openTender(id) {
+  CURRENT = id;
+  const t = await api(`/api/v1/tenders/${id}`);
+  render(t);
+  loadList();
+}
+
+function render(t) {
+  const a = t.latest_analysis;
+  const ex = a?.extraction || {}, rec = a?.recommendation, win = a?.win, fc = a?.forecast;
+  const [cls, icon, label] = DECISION[rec?.decision] || ["warn", "?", "Not analysed"];
+  const cur = t.currency;
+  $("#detail").innerHTML = `
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div style="flex:3 1 300px"><h2 style="margin:0">${esc(t.reference || "")} <span class="pill">${esc(t.status)}</span></h2>
+        <div style="font-size:18px;font-weight:600">${esc(t.title)}</div>
+        <div class="muted">${esc(t.buyer || "")} ${t.sector ? "· " + esc(t.sector) : ""} ${t.region ? "· " + esc(t.region) : ""}</div></div>
+      <div style="flex:0 0 auto"><span class="badge ${cls}">${icon} AI recommendation: ${label}</span></div>
+    </div>
+    ${a ? `<p>${esc(a.summary)}</p><div class="muted" style="font-size:12px">Engine: ${esc(a.engine)}${a.model ? " (" + esc(a.model) + ")" : ""}
+      ${ex._fallback_reason && a.engine === "heuristic" ? " · " + esc(ex._fallback_reason) : ""} · analysed ${esc(a.created_at.slice(0, 16).replace("T", " "))}</div>` : ""}
+    ${rec ? `<div class="grid2" style="margin-top:10px">
+      <div>${rec.hard_stops.map((x) => `<div class="badge bad" style="margin:2px 0">✕ ${esc(x)}</div>`).join("")}
+           ${rec.concerns.map((x) => `<div class="badge warn" style="margin:2px 0;font-weight:500">! ${esc(x)}</div>`).join("")}</div>
+      <div>${rec.strengths.map((x) => `<div class="badge good" style="margin:2px 0;font-weight:500">✓ ${esc(x)}</div>`).join("")}</div>
+    </div>` : ""}
+  </div>
+
+  ${a ? `<div class="card"><h2>Key facts</h2><div class="tiles">
+    ${[["Estimated value", money(ex.estimated_value, ex.currency || cur)], ["Deadline", ex.submission_deadline || "—"],
+       ["Duration", ex.contract_duration_months ? `${Math.round(ex.contract_duration_months)} mo` : "—"],
+       ["Evaluation", (ex.evaluation_method || "—").replace("_", " ") + (ex.technical_weight_pct ? ` ${ex.technical_weight_pct}:${100 - ex.technical_weight_pct}` : "")],
+       ["Bid security", money(ex.bid_security_amount)], ["Perf. guarantee", ex.performance_guarantee_pct != null ? ex.performance_guarantee_pct + "%" : "—"],
+       ["Payment terms", ex.payment_terms_days ? ex.payment_terms_days + " days" : "—"], ["LD cap", ex.liquidated_damages_cap_pct != null ? ex.liquidated_damages_cap_pct + "%" : "—"]]
+      .map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v" style="font-size:15px">${esc(v)}</div></div>`).join("")}
+    </div>${ex.scope_items?.length ? `<label>Scope</label><ul style="margin:0;padding-left:18px">${ex.scope_items.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}</div>
+
+  <div class="grid2">
+    <div class="card"><h2>Eligibility vs. company profile</h2><div class="scroll"><table>
+      <tr><th>Criterion</th><th>Required</th><th>We have</th><th>Result</th></tr>
+      ${a.compliance.checks.map((c) => { const [k, l] = STATUS[c.status]; return `<tr><td>${esc(c.criterion)}</td>
+        <td>${Array.isArray(c.required) ? esc(c.required.join(", ")) : esc(c.required == null ? "—" : compact(c.required))}</td>
+        <td>${Array.isArray(c.actual) ? esc(c.actual.join(", ")) : esc(compact(c.actual))}</td>
+        <td><span class="badge ${k}" style="font-size:12px;padding:1px 6px">${l}</span></td></tr>`; }).join("")}
+    </table></div>${a.compliance.warnings.map((w) => `<div class="badge warn" style="margin-top:6px;font-weight:500">! ${esc(w)}</div>`).join("")}</div>
+
+    <div class="card"><h2>Contract risk · ${a.risk.score}/100 <span class="badge ${a.risk.band === "LOW" ? "good" : a.risk.band === "MEDIUM" ? "warn" : "bad"}" style="font-size:11px">${a.risk.band}</span></h2>
+      <div class="scroll"><table><tr><th>Risk</th><th>Severity</th><th class="num">Pts</th></tr>
+      ${a.risk.items.map((r) => `<tr><td>${esc(r.description)}${r.evidence ? `<div class="muted" style="font-size:12px">“${esc(r.evidence)}”</div>` : ""}</td>
+        <td>${esc(r.severity)}</td><td class="num">${r.points}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">No risk flags found</td></tr>`}
+      </table></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h2>Win probability</h2>
+      <div class="tiles"><div class="tile"><div class="k">P(win)</div><div class="v">${pct(win.probability)}</div></div>
+        <div class="tile"><div class="k">Model</div><div class="v" style="font-size:13px">${esc(win.model_source)} · n=${win.training_samples}</div></div></div>
+      <label>What drives it (log-odds impact)</label>
+      <table>${win.drivers.map((d) => `<tr><td>${esc(d.label)}</td><td class="num">${esc(d.value)}</td>
+        <td class="num" style="color:var(--${d.impact >= 0 ? "good" : "bad"})">${d.impact >= 0 ? "▲ +" : "▼ "}${d.impact.toFixed(2)}</td></tr>`).join("")}</table>
+    </div>
+    <div class="card"><h2>Profit forecast</h2>${fc ? forecastHtml(fc, cur) : `<p class="muted">Add a direct-cost estimate below to forecast profit and get a recommended price.</p>`}</div>
+  </div>` : ""}
+
+  ${fc ? `<div class="card"><h2>Price optimisation · expected value by bid price</h2>
+    <div class="chart" id="curve"></div>
+    <div class="muted" style="font-size:12px">Expected value = P(win at price) × expected profit if won − bid cost.
+      Marker = recommended price${fc.price_optimisation.constrained_by_loss_limit ? " (limited by the loss-probability policy)" : ""}.
+      ${fc.reference_value_assumed ? "No published estimate: the price reference is assumed at cost base +15%." : ""}</div>
+    <details style="margin-top:6px"><summary>Table view</summary><div class="scroll"><table>
+      <tr><th class="num">Markup</th><th class="num">Price</th><th class="num">P(win)</th><th class="num">Profit if won</th><th class="num">P(loss)</th><th class="num">Expected value</th></tr>
+      ${fc.price_optimisation.curve.map((c) => `<tr><td class="num">${c.markup_pct}%</td><td class="num">${compact(c.price)}</td><td class="num">${pct(c.win_probability)}</td>
+        <td class="num">${compact(c.expected_profit_if_won)}</td><td class="num">${pct(c.probability_of_loss)}</td><td class="num">${compact(c.expected_value)}</td></tr>`).join("")}
+    </table></div></details></div>` : ""}
+
+  <div class="card"><h2>Re-run analysis</h2>
+    <div class="row">
+      <div><label for="dc">Direct cost</label><input id="dc" type="number" min="0" value="${fc?.inputs.direct_cost ?? ""}"></div>
+      <div><label for="bp">Bid price (blank = recommended)</label><input id="bp" type="number" min="0" value=""></div>
+      <div><label for="bpc">Bid preparation cost</label><input id="bpc" type="number" min="0" value="${fc?.inputs.bid_preparation_cost ?? 0}"></div>
+    </div>
+    <div class="row">
+      <div><label for="ts">Expected technical score (0–1)</label><input id="ts" type="number" step="0.05" min="0" max="1" value="${win?.assumptions?.technical_score ?? 0.7}"></div>
+      <div><label for="cp">Expected competitors</label><input id="cp" type="number" min="1" value="${win?.assumptions?.competitors ?? 5}"></div>
+      <div><label for="inc">Incumbent?</label><select id="inc"><option value="false">No</option><option value="true" ${win?.assumptions?.incumbent ? "selected" : ""}>Yes</option></select></div>
+    </div>
+    <div class="row" style="margin-top:10px"><label style="flex:0 0 auto"><input id="reuse" type="checkbox" style="width:auto" ${a ? "checked" : ""}> Reuse extraction (skip AI call)</label>
+      <button id="rerun" style="flex:0 0 auto" ${t.allowed_actions.includes("analyze") ? "" : "disabled"}>Run</button></div>
+  </div>
+
+  <div class="card"><h2>Workflow</h2>
+    ${t.approvals.length ? `<table><tr><th>Approval</th><th>Reason</th><th>Decision</th><th>Comment</th></tr>
+      ${t.approvals.map((p) => `<tr><td>${esc(p.role_required)}</td><td>${esc(p.reason)}</td><td>${esc(p.decision)}</td><td>${esc(p.comment || "")}</td></tr>`).join("")}</table>` : ""}
+    <div class="row" style="margin-top:8px">
+      <div><label for="cm">Comment / justification</label><input id="cm"></div>
+      <div><label for="dec">Decision</label><select id="dec"><option value="bid">Bid</option><option value="no_bid">No bid</option></select></div>
+      <div><label for="out">Outcome</label><select id="out"><option value="won">Won</option><option value="lost">Lost</option></select></div>
+    </div>
+    <div class="row" style="margin-top:10px">${t.allowed_actions.filter((x) => x !== "analyze").map((x) =>
+      `<button class="${x === "withdraw" || x === "reject" ? "secondary" : ""}" data-act="${x}" style="flex:0 0 auto">${x.replace(/_/g, " ")}</button>`).join("") || `<span class="muted">No actions available for your role in this state.</span>`}</div>
+  </div>
+  <div class="card"><h2>Audit trail</h2><div id="audit" class="scroll muted">Loading…</div></div>`;
+
+  if (fc) drawCurve(fc);
+  $("#rerun").onclick = () => rerun(t.id);
+  document.querySelectorAll("[data-act]").forEach((b) => b.onclick = () => act(t.id, b.dataset.act));
+  api(`/api/v1/tenders/${t.id}/audit`).then((rows) => {
+    $("#audit").innerHTML = `<table><tr><th>When</th><th>User</th><th>Action</th><th>Detail</th></tr>${rows.map((r) =>
+      `<tr><td>${esc(r.at.slice(0, 19).replace("T", " "))}</td><td>#${esc(r.actor_id)}</td><td>${esc(r.action)}</td>
+       <td style="font-size:12px">${esc(Object.entries(r.detail).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · "))}</td></tr>`).join("")}</table>`;
+  }).catch(() => {});
+}
+
+function forecastHtml(fc, cur) {
+  const e = fc.evaluated_price;
+  const lossCls = e.probability_of_loss > 0.25 ? "bad" : e.probability_of_loss > 0.1 ? "warn" : "good";
+  return `<div class="tiles">
+    <div class="tile"><div class="k">Evaluated price</div><div class="v">${compact(e.price)}</div></div>
+    <div class="tile"><div class="k">Expected profit</div><div class="v">${compact(e.expected_profit)}</div></div>
+    <div class="tile"><div class="k">Expected margin</div><div class="v">${e.expected_margin_pct.toFixed(1)}%</div></div>
+    <div class="tile"><div class="k">P(loss)</div><div class="v"><span class="badge ${lossCls}" style="padding:0 6px">${pct(e.probability_of_loss, 1)}</span></div></div>
+    <div class="tile"><div class="k">Profit P10 / P50 / P90</div><div class="v" style="font-size:14px">${compact(e.p10)} / ${compact(e.p50)} / ${compact(e.p90)}</div></div>
+    <div class="tile"><div class="k">Risk-adjusted EV</div><div class="v">${compact(fc.risk_adjusted_expected_value)}</div></div>
+  </div>
+  <label>Expected cost build-up (${esc(cur)})</label><table>${Object.entries(e.cost_breakdown).map(([k, v]) =>
+    `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${money(v)}</td></tr>`).join("")}</table>`;
+}
+
+function drawCurve(fc) {
+  const pts = fc.price_optimisation.curve, rec = fc.price_optimisation.recommended;
+  const box = $("#curve"), W = box.clientWidth || 600, H = 220, m = {l: 56, r: 30, t: 24, b: 28};
+  const xs = pts.map((p) => p.price), ys = pts.map((p) => p.expected_value);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(0, ...ys), y1 = Math.max(0, ...ys) * 1.12;  // headroom for the marker label
+  const X = (v) => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0 || 1)) * (H - m.t - m.b);
+  const ticks = [0, .25, .5, .75, 1].map((f) => y0 + f * (y1 - y0));
+  const xt = [0, .25, .5, .75, 1].map((f) => x0 + f * (x1 - x0));
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${X(p.price).toFixed(1)},${Y(p.expected_value).toFixed(1)}`).join("");
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Expected value by bid price">
+    ${ticks.map((v) => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>
+      <text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${compact(v)}</text>`).join("")}
+    <line x1="${m.l}" x2="${W - m.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)"/>
+    ${xt.map((v) => `<text x="${X(v)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--muted)">${compact(v)}</text>`).join("")}
+    <path d="${path}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(rec.price)}" cy="${Y(rec.expected_value)}" r="5" fill="var(--series-1)" stroke="var(--surface)" stroke-width="2"/>
+    <text x="${X(rec.price)}" y="${Y(rec.expected_value) - 10}" text-anchor="middle" font-size="11" fill="var(--text)">Recommended</text>
+    <line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden"/>
+    <circle id="hd" r="4" fill="var(--series-1)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+    <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent" id="hit"/>
+  </svg><div class="tip" id="tip"></div>`;
+  const tip = $("#tip"), xh = $("#xh"), hd = $("#hd");
+  $("#hit").addEventListener("mousemove", (ev) => {
+    const r = ev.currentTarget.ownerSVGElement.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (W / r.width);
+    const p = pts.reduce((b, c) => Math.abs(X(c.price) - px) < Math.abs(X(b.price) - px) ? c : b);
+    xh.setAttribute("x1", X(p.price)); xh.setAttribute("x2", X(p.price)); xh.setAttribute("visibility", "visible");
+    hd.setAttribute("cx", X(p.price)); hd.setAttribute("cy", Y(p.expected_value)); hd.setAttribute("visibility", "visible");
+    tip.innerHTML = `<b>${money(p.price)}</b> (markup ${p.markup_pct}%)<br>P(win) ${pct(p.win_probability)} · P(loss) ${pct(p.probability_of_loss)}<br>Expected value ${money(p.expected_value)}`;
+    tip.style.display = "block";
+    const left = X(p.price) / W * r.width;
+    tip.style.left = `${Math.min(left + 12, r.width - tip.offsetWidth - 4)}px`; tip.style.top = "8px";
+  });
+  $("#hit").addEventListener("mouseleave", () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); hd.setAttribute("visibility", "hidden"); });
+}
+
+async function rerun(id) {
+  const num = (s) => $(s).value === "" ? null : Number($(s).value);
+  const body = {
+    reuse_extraction: $("#reuse").checked,
+    bid_context: {technical_score: num("#ts") ?? 0.7, competitors: num("#cp") ?? 5, incumbent: $("#inc").value === "true"},
+    pricing: num("#dc") ? {direct_cost: num("#dc"), bid_price: num("#bp"), bid_preparation_cost: num("#bpc") ?? 0} : null,
+  };
+  try { render(await api(`/api/v1/tenders/${id}/analyze`, {method: "POST", body: JSON.stringify(body)})); loadKpis(); toast("Analysis updated"); }
+  catch (e) { toast(e.message); }
+}
+
+async function act(id, action) {
+  const body = {comment: $("#cm").value || null};
+  if (action === "decide") body.decision = $("#dec").value;
+  if (action === "record_outcome") body.outcome = $("#out").value;
+  try { render(await api(`/api/v1/tenders/${id}/actions/${action}`, {method: "POST", body: JSON.stringify(body)})); loadList(); loadKpis(); toast(`${action.replace(/_/g, " ")}: done`); }
+  catch (e) { toast(e.message); }
+}
+
+$("#create").onclick = async () => {
+  const btn = $("#create"); btn.disabled = true; btn.textContent = "Analysing…";
+  try {
+    let t;
+    const f = $("#newFile").files[0];
+    if (f) { const fd = new FormData(); fd.append("file", f); t = await api("/api/v1/tenders/upload", {method: "POST", body: fd}); }
+    else t = await api("/api/v1/tenders", {method: "POST", body: JSON.stringify({text: $("#newText").value})});
+    $("#newText").value = ""; $("#newFile").value = "";
+    CURRENT = t.id; render(t); loadList(); loadKpis();
+  } catch (e) { toast(e.message); }
+  finally { btn.disabled = false; btn.textContent = "Analyse tender"; }
+};
+$("#connect").onclick = connect;
+$("#statusFilter").onchange = loadList;
+if (KEY) connect();
+</script>
+</body>
+</html>
