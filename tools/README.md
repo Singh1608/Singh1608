@@ -34,9 +34,17 @@ rather than a branch name so the sandbox runs exactly the code that was
 reviewed. Commit and push before creating the sandbox — nothing is copied into
 it by hand.
 
-Commands run from the checkout root, which is the sandbox's working directory.
-Intermediate files go to `.work/` (git-ignored); set `WORK_DIR` to put them
-elsewhere.
+The checkout lands in **`/vercel/Singh1608`** — a subdirectory named after the
+repo, not the sandbox's working directory (`/vercel`). Run commands with
+`"cwd": "/vercel/Singh1608"`, or `cd` there first:
+
+```sh
+cd /vercel/Singh1608 && git log --oneline -1   # confirm the pinned commit
+node tools/dry_run.mjs
+```
+
+Intermediate files go to `.work/` inside the checkout (git-ignored); set
+`WORK_DIR` to put them elsewhere.
 
 ## Limits to plan around
 
