@@ -1,6 +1,7 @@
 """Win-probability model.
 
-A regularised logistic regression over bid features. Organisations with
+A regularised logistic regression over bid features (plain NumPy, so the
+serverless bundle stays small). Organisations with
 enough recorded outcomes get a model trained on their own history. Until they
 have that, the model is trained on a seeded synthetic "industry prior" whose
 data-generating process is written out in ``_prior_logit``. That keeps
@@ -19,8 +20,6 @@ from dataclasses import dataclass
 from threading import Lock
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
 
 FEATURES = [
     "price_ratio",          # our bid price / buyer's estimated value
@@ -45,6 +44,48 @@ LABELS = {
     "risk_score": "Contract risk",
 }
 MIN_ORG_SAMPLES = 40
+
+
+class StandardScaler:
+    def fit(self, x: np.ndarray) -> StandardScaler:
+        self.mean_ = x.mean(axis=0)
+        self.scale_ = x.std(axis=0)
+        self.scale_[self.scale_ == 0] = 1.0
+        return self
+
+    def transform(self, x: np.ndarray) -> np.ndarray:
+        return (x - self.mean_) / self.scale_
+
+
+class LogisticRegression:
+    """L2-regularised logistic regression fitted by Newton's method.
+
+    Minimises 0.5·||w||² + C·Σ log-loss (intercept unpenalised), the same
+    objective as scikit-learn's default solver.
+    """
+
+    def __init__(self, C: float = 1.0, max_iter: int = 100):
+        self.C, self.max_iter = C, max_iter
+
+    def fit(self, x: np.ndarray, y: np.ndarray) -> LogisticRegression:
+        xb = np.hstack([x, np.ones((len(x), 1))])
+        w = np.zeros(xb.shape[1])
+        reg = np.eye(xb.shape[1]) / self.C
+        reg[-1, -1] = 0.0
+        for _ in range(self.max_iter):
+            p = 1 / (1 + np.exp(-xb @ w))
+            grad = xb.T @ (p - y) + reg @ w
+            hess = (xb * (p * (1 - p))[:, None]).T @ xb + reg + 1e-9 * np.eye(len(w))
+            step = np.linalg.solve(hess, grad)
+            w -= step
+            if np.abs(step).max() < 1e-8:
+                break
+        self.coef_, self.intercept_ = w[None, :-1], w[-1:]
+        return self
+
+    def predict_proba(self, x: np.ndarray) -> np.ndarray:
+        p = 1 / (1 + np.exp(-(x @ self.coef_[0] + self.intercept_[0])))
+        return np.column_stack([1 - p, p])
 
 
 @dataclass

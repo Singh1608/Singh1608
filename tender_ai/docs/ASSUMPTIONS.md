@@ -19,6 +19,7 @@ committee, finance, legal and IT can each check the parts they own.
 | **Configuration** | Every policy threshold (hurdle margin, risk appetite, DoA limits, cost of capital) is an environment variable, so a policy change is a config change, not a release. | `config.py`, `.env.example` |
 | **Data residency / retention** | Tender text is stored in the platform's own database. When Claude is enabled, the text is sent to the Anthropic API for extraction. Organisations with residency constraints can set `TENDER_LLM_ENABLED=off`. | — |
 | **Money** | Amounts are stored in the tender's currency as floats and rounded to 2 dp at the edges. That is adequate for forecasting; a general-ledger integration would switch to `Decimal` and add FX conversion to the org's base currency. | — |
+| **Public demo** | `TENDER_DEMO_MODE=1` seeds well-known demo keys. It is meant for sandboxes only: anyone with the URL can act as any role. `TENDER_LLM_MAX_CALLS_PER_HOUR` caps Claude spend per instance. | `config.py`, `services/llm.py` |
 | **Operations** | Stateless API (scale horizontally), `/health` for liveness, `/ready` (DB check) for readiness, `x-request-id` correlation on every response, non-root container, Postgres in production and SQLite for development and tests. | `main.py`, `Dockerfile` |
 
 ## 2. Business logic

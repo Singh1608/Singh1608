@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+from collections import deque
+from threading import Lock
 
 from ..config import get_settings
 from ..domain.tender import RISK_CATALOGUE, TenderExtraction
@@ -39,6 +42,22 @@ class LLMUnavailable(RuntimeError):
     pass
 
 
+_calls: deque[float] = deque()
+_calls_lock = Lock()
+
+
+def _take_call_slot(limit: int) -> None:
+    if limit <= 0:
+        return
+    now = time.monotonic()
+    with _calls_lock:
+        while _calls and now - _calls[0] > 3600:
+            _calls.popleft()
+        if len(_calls) >= limit:
+            raise LLMUnavailable(f"Hourly Claude call limit reached ({limit}/h)")
+        _calls.append(now)
+
+
 def _has_credentials() -> bool:
     return any(
         os.environ.get(k)
@@ -66,6 +85,7 @@ def extract_with_claude(text: str) -> TenderExtraction:
             f"({settings.llm_max_input_chars:,})"
         )
 
+    _take_call_slot(settings.llm_max_calls_per_hour)
     client = anthropic.Anthropic()
     try:
         response = client.beta.messages.parse(

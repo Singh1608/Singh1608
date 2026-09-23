@@ -132,3 +132,25 @@ def test_health_and_dashboard_page(client):
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/ready").json()["llm_enabled"] is False
     assert "Tender AI" in client.get("/").text
+
+
+def test_demo_mode_seeds_on_startup(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+
+    from app import config, db
+    from app.main import create_app
+
+    monkeypatch.setenv("TENDER_DEMO_MODE", "1")
+    config.get_settings.cache_clear()
+    db.engine = create_engine(f"sqlite:///{tmp_path}/demo.db", connect_args={"check_same_thread": False})
+    db.SessionLocal.configure(bind=db.engine)
+    try:
+        with TestClient(create_app()) as c:
+            assert c.get("/ready").json()["demo_mode"] is True
+            assert len(c.get("/api/v1/tenders", headers=hdr("viewer")).json()) == 1
+        with TestClient(create_app()) as c:  # a warm restart must not duplicate data
+            assert len(c.get("/api/v1/tenders", headers=hdr("viewer")).json()) == 1
+    finally:
+        monkeypatch.delenv("TENDER_DEMO_MODE")
+        config.get_settings.cache_clear()

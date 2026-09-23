@@ -108,3 +108,17 @@ def test_recommendation_hard_stop_and_approval_matrix():
     assert roles == ["finance", "executive", "legal"]
     roles = [r for r, _ in rules.required_approvals(200_000, {"score": 10, "items": []}, s)]
     assert roles == ["bid_manager"]
+
+
+def test_llm_hourly_call_cap():
+    import pytest
+
+    from app.services import llm
+
+    llm._calls.clear()
+    llm._take_call_slot(2)
+    llm._take_call_slot(2)
+    with pytest.raises(llm.LLMUnavailable, match="limit"):
+        llm._take_call_slot(2)
+    llm._take_call_slot(0)  # 0 = unlimited
+    llm._calls.clear()

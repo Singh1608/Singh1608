@@ -55,6 +55,22 @@ cp .env.example .env    # set TENDER_BOOTSTRAP_ADMIN_KEY and optionally ANTHROPI
 docker compose up --build
 ```
 
+### Vercel
+
+The `tender-ai` Vercel project deploys this folder (Root Directory `tender_ai`,
+entrypoint `app.main:app` set in `pyproject.toml`). It runs as a **public demo
+sandbox**:
+
+- `TENDER_DEMO_MODE=1` seeds the demo org and the `demo-<role>-key` logins on
+  every cold start.
+- Storage is SQLite in `/tmp`, so data resets whenever Vercel recycles the
+  instance, and two instances can show different data. For durable data, add
+  a Postgres database (e.g. Neon from Vercel Storage) and set
+  `TENDER_DATABASE_URL`.
+- To enable Claude, add `ANTHROPIC_API_KEY` under Project Settings →
+  Environment Variables. `TENDER_LLM_MAX_CALLS_PER_HOUR` caps spend per
+  instance, because the demo keys are public.
+
 ## API overview (`X-API-Key` header on every call)
 
 | Method & path | Purpose | Roles |

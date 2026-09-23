@@ -27,9 +27,14 @@ def _int(name: str, default: int) -> int:
 class Settings:
     app_name: str = "Tender AI"
     environment: str = field(default_factory=lambda: _env("TENDER_ENV", "dev"))
-    database_url: str = field(
-        default_factory=lambda: _env("TENDER_DATABASE_URL", "sqlite:///./tender_ai.db")
-    )
+    # On Vercel only /tmp is writable, and it is wiped whenever an instance
+    # is recycled. Set TENDER_DATABASE_URL to Postgres for durable data.
+    database_url: str = field(default_factory=lambda: _env(
+        "TENDER_DATABASE_URL",
+        "sqlite:////tmp/tender_ai.db" if os.environ.get("VERCEL") else "sqlite:///./tender_ai.db",
+    ))
+    # Public sandbox: seeds the demo org and its well-known keys on startup.
+    demo_mode: bool = field(default_factory=lambda: _env("TENDER_DEMO_MODE", "0") == "1")
 
     # AI engine. With no key the platform runs fully on the offline extractor.
     anthropic_model: str = field(default_factory=lambda: _env("TENDER_LLM_MODEL", "claude-opus-5"))
@@ -37,6 +42,8 @@ class Settings:
         default_factory=lambda: _env("TENDER_LLM_ENABLED", "auto") != "off"
     )
     llm_max_input_chars: int = field(default_factory=lambda: _int("TENDER_LLM_MAX_CHARS", 400_000))
+    # Spend guard for public deployments; 0 = unlimited. Counted per instance.
+    llm_max_calls_per_hour: int = field(default_factory=lambda: _int("TENDER_LLM_MAX_CALLS_PER_HOUR", 0))
 
     # Bootstrap admin key; only honoured when the users table is empty.
     bootstrap_admin_key: str = field(

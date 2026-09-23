@@ -41,6 +41,10 @@ async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     dbmod.init_db()
     _bootstrap_admin()
+    if get_settings().demo_mode:
+        from .cli import seed_demo
+
+        seed_demo()  # idempotent; offline extractor, so cold starts cost nothing
     yield
 
 
@@ -77,7 +81,8 @@ def create_app() -> FastAPI:
         with dbmod.SessionLocal() as s:
             s.execute(text("SELECT 1"))
         return {"status": "ready", "llm_enabled": llm.is_enabled(),
-                "environment": get_settings().environment}
+                "environment": get_settings().environment,
+                "demo_mode": get_settings().demo_mode}
 
     @app.get("/", include_in_schema=False)
     def index():
