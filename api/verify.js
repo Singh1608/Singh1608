@@ -15,14 +15,23 @@
 
 import { readBlob, readFeed, writeBlob } from "./_lib.js";
 import { verifyAll } from "./_verify.js";
+import { keyMatches } from "./overrides.js";
 
 export const VERIFY_PATH = "pipeline/verify.json";
 const HISTORY = 14;
 
+// The cron sends CRON_SECRET. He can also start a check on demand with the
+// edit key the page already asks him for (see api/overrides.js), so a run
+// "now" never needs the cron secret to leave Vercel. A check only reads
+// public postings and rewrites its own results, so the edit key is enough.
 function unauthorized(req) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return "CRON_SECRET is not configured";
-  return (req.headers?.authorization || "") === `Bearer ${expected}` ? null : "bad or missing authorization";
+  const cron = process.env.CRON_SECRET;
+  const edit = process.env.PIPELINE_EDIT_KEY;
+  if (!cron && !edit) return "neither CRON_SECRET nor PIPELINE_EDIT_KEY is configured";
+  const got = (req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!got) return "bad or missing authorization";
+  if ((cron && keyMatches(got, cron)) || (edit && keyMatches(got, edit))) return null;
+  return "bad or missing authorization";
 }
 
 export function readVerify() {

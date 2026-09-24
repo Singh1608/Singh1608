@@ -33,7 +33,7 @@ function cors(res) {
 
 // Compare digests, so the comparison takes the same time whatever the input
 // length and a wrong key reveals nothing about the right one.
-function keyMatches(got, expected) {
+export function keyMatches(got, expected) {
   const a = createHash("sha256").update(String(got)).digest();
   const b = createHash("sha256").update(String(expected)).digest();
   return timingSafeEqual(a, b);

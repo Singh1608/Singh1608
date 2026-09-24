@@ -147,7 +147,13 @@ const call = (handler, req) => new Promise((resolve) => {
 let r = await call(verifyHandler, { headers: {} });
 check("verify refuses a caller without the cron secret", r.code === 401);
 
-r = await call(verifyHandler, { headers: { authorization: "Bearer cron" } });
+process.env.PIPELINE_EDIT_KEY = "edit";
+r = await call(verifyHandler, { headers: { authorization: "Bearer wrong" } });
+check("verify refuses a wrong key", r.code === 401 && !blobs["pipeline/verify.json"]);
+
+// The first run goes in with the edit key: an on-demand check.
+r = await call(verifyHandler, { headers: { authorization: "Bearer edit" } });
+check("verify accepts the edit key for an on-demand run", r.code === 200, String(r.code));
 check("run checks open, ungated roles only (4 of 6)", r.body.candidates === 4 && r.body.checked === 4, JSON.stringify(r.body));
 check("run counts 2 open, 1 closed, 1 unknown", r.body.open === 2 && r.body.closed === 1 && r.body.unknown === 1, JSON.stringify(r.body));
 check("newly_closed names the closed role", r.body.newly_closed.length === 1 && r.body.newly_closed[0].id === "gh-gone");
