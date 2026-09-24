@@ -36,6 +36,17 @@ const CASES = [
   ["Business IT Consultant – Financial Services / Insurance Team", "tech"],
   ["Data Business Analyst – GCP / Hadoop", "tech"],
   ["Associate or Consultant, Warsaw", "other"],
+  // Widened after the first live run left 52 of 198 roles under "other".
+  ["Business Consultant", "strategy"],
+  ["Chief of Staff / COO", "strategy"],
+  ["Senior Consultant - Capital Markets", "finance"],
+  ["Controllership Senior Associate II, EMEA REMS", "finance"],
+  ["Alpha Middle Office Expert, hybrid, Senior Associate", "finance"],
+  ["Continuous Improvement Specialist", "transformation"],
+  ["Procurement Reinvention Consultant", "transformation"],
+  ["CRM Management Consultant- Dynamics 365 –(GN SONG)", "tech"],
+  ["Senior ITX Integration Specialist Consultant", "tech"],
+  ["Senior .NET Consultant", "tech"],
 ];
 const wrong = CASES.filter(([t, want]) => categorize(t) !== want)
   .map(([t, want]) => `${t} -> ${categorize(t)} (want ${want})`);
