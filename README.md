@@ -128,6 +128,15 @@ title by `api/_category.js`. Changes made on the page are stored in
 `PIPELINE_EDIT_KEY` is set, changes are saved only on the device where they
 were made.
 
+`api/verify.js` runs daily at 17:00 UTC, an hour after the refresh. It checks
+every shortlisted role through the platform's own API (Greenhouse, Lever,
+SmartRecruiters, Ashby, Workday) or by reading the page for a closure notice
+or an expired `validThrough` date. A 403, a 5xx or a timeout counts as
+unknown, never as closed. Closed roles leave the shortlist but stay under
+"Closed" on the page. Roles with a real posting date 30+ days old are tagged,
+not removed. Results live in `pipeline/verify.json`, and `/api/status` reports
+the latest run.
+
 Node tests for the dashboard API: `cd tests && for t in *.test.mjs; do node $t; done`.
 
 ## Testing
