@@ -6,46 +6,59 @@
 <title>Poland Role Pipeline</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
+  /* Blue, light-shaded theme. Two colour codes carry meaning and nothing else
+     uses them: fit tier (blues, strongest to weakest) on the card's left edge
+     and pill, and status (amber flagged, green applied, slate dismissed) on
+     the tag, the pressed button and the filter chip. Every text/background
+     pair here is at least 4.5:1. */
   :root {
     color-scheme: light;
-    --bg: #f3f6f5;
+    --bg: #f1f6fd;
+    --head-bg: #e6effc;
     --surface: #ffffff;
-    --surface-2: #eaefed;
-    --ink: #16211e;
-    --muted: #5d6b66;
-    --line: #dce3e0;
-    --accent: #1f6f5c;
+    --surface-2: #eaf1fb;
+    --ink: #0e1e38;
+    --muted: #4a5f80;
+    --line: #d4e0f0;
+    --accent: #1d5fcc;
     --accent-ink: #ffffff;
-    --flag: #9a6311;
-    --flag-bg: #fbf0dd;
-    --applied: #256d46;
-    --applied-bg: #e2f1e8;
-    --dim: #7c8a85;
-    --t1: #1f6f5c;
-    --t2: #486f96;
-    --t3: #8a8175;
-    --err: #b3352b;
+    --dim: #62779a;
+    --err: #b3261e;
+
+    /* Fit */
+    --t1: #1746b8;  --t1-bg: #e3ebfc;   /* Direct match: deep blue */
+    --t2: #0b6b78;  --t2-bg: #dbf2f3;   /* Strong fit: teal */
+    --t3: #56657e;  --t3-bg: #edf0f5;   /* Adjacent: slate */
+
+    /* Status */
+    --open: #1d5fcc;
+    --flag: #924300;       --flag-bg: #fdefd3;       --flag-line: #f0c67a;
+    --applied: #146236;    --applied-bg: #dcf5e5;    --applied-line: #8fd3aa;
+    --dismissed: #5c6679;  --dismissed-bg: #eceff4;  --dismissed-line: #c9d0db;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
-      --bg: #12171a;
-      --surface: #1a2125;
-      --surface-2: #222b30;
-      --ink: #e7eeeb;
-      --muted: #95a39e;
-      --line: #2b353a;
-      --accent: #5cc0a4;
-      --accent-ink: #07231d;
-      --flag: #e0ac5d;
-      --flag-bg: #2e2617;
-      --applied: #74ca9a;
-      --applied-bg: #17301f;
-      --dim: #7d8b86;
-      --t1: #5cc0a4;
-      --t2: #82adda;
-      --t3: #a89d8d;
-      --err: #e8776c;
+      --bg: #0c1424;
+      --head-bg: #0f1a2e;
+      --surface: #131e33;
+      --surface-2: #1a2842;
+      --ink: #e5edfa;
+      --muted: #9fb3d1;
+      --line: #25365a;
+      --accent: #78aaff;
+      --accent-ink: #06142b;
+      --dim: #8193b0;
+      --err: #f2877e;
+
+      --t1: #8db4ff;  --t1-bg: #172a4f;
+      --t2: #5fd6d2;  --t2-bg: #0d2e33;
+      --t3: #aab6ca;  --t3-bg: #1f2939;
+
+      --open: #78aaff;
+      --flag: #f4bb55;       --flag-bg: #372709;       --flag-line: #6b4c14;
+      --applied: #6ad8a0;    --applied-bg: #0e2e1f;    --applied-line: #1f5c3d;
+      --dismissed: #a1abbb;  --dismissed-bg: #1f2632;  --dismissed-line: #3a4457;
     }
   }
   * { box-sizing: border-box; }
@@ -64,12 +77,13 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--bg);
+    background: var(--head-bg);
     border-bottom: 1px solid var(--line);
     padding-top: env(safe-area-inset-top, 0px);
   }
   .head-inner { padding-block: 14px 10px; }
-  h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  h1::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 0; }
   .chips { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 10px; }
   .chip {
@@ -79,37 +93,56 @@
   }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .chip .n { opacity: 0.75; margin-left: 4px; }
+  .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--c, var(--muted)); }
+  .chip[aria-pressed="true"] .dot { box-shadow: 0 0 0 1.5px var(--accent-ink); }
   .chip:focus-visible, .act:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   main { padding-block: 14px 56px; }
 
+  .legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    font-size: 12px; color: var(--muted); margin: 0 0 12px;
+  }
+  .legend b { font-weight: 600; color: var(--ink); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .swatch.round { border-radius: 50%; }
+
   .job {
     background: var(--surface); border: 1px solid var(--line);
-    border-left: 3px solid var(--tier, var(--line));
-    border-radius: 8px; padding: 13px 14px; margin-bottom: 9px;
+    border-left: 4px solid var(--tier, var(--line));
+    border-radius: 10px; padding: 13px 14px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(14, 30, 56, 0.05);
   }
-  .job.is-dismissed { opacity: 0.52; }
+  .job.is-flagged { border-color: var(--flag-line); border-left-color: var(--tier, var(--line)); }
+  .job.is-applied { border-color: var(--applied-line); border-left-color: var(--tier, var(--line)); }
+  .job.is-dismissed { opacity: 0.6; }
   .job-co { font-size: 12.5px; font-weight: 600; color: var(--muted); }
   .job-title { font-size: 15.5px; font-weight: 700; margin: 1px 0 0; line-height: 1.3; }
   .job-why { font-size: 13px; color: var(--muted); margin: 7px 0 0; }
   .job-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
   .tierpill {
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-    color: var(--tier); border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px;
+    color: var(--tier); background: var(--tier-bg); border-radius: 4px; padding: 3px 7px;
   }
   .state {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-    border-radius: 4px; padding: 3px 7px;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    border-radius: 999px; padding: 3px 8px 3px 7px;
   }
+  .state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .state.flagged { color: var(--flag); background: var(--flag-bg); }
   .state.applied { color: var(--applied); background: var(--applied-bg); }
+  .state.dismissed { color: var(--dismissed); background: var(--dismissed-bg); }
   .spacer { flex: 1; }
   .act {
     font: inherit; font-size: 13px; font-weight: 600;
     border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
     border-radius: 7px; padding: 8px 12px; min-height: 40px; cursor: pointer;
   }
-  .act[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .act[data-act="flagged"][aria-pressed="true"]   { background: var(--flag-bg); border-color: var(--flag); color: var(--flag); }
+  .act[data-act="applied"][aria-pressed="true"]   { background: var(--applied-bg); border-color: var(--applied); color: var(--applied); }
+  .act[data-act="dismissed"][aria-pressed="true"] { background: var(--dismissed-bg); border-color: var(--dismissed); color: var(--dismissed); }
   .open {
     font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none;
     padding: 8px 2px; min-height: 40px; display: inline-flex; align-items: center;
@@ -148,7 +181,7 @@
 
 <script>
 (function () {
-  // Served by api/jobs.js, which reads the Blob feed the twice-daily cron
+  // Served by api/jobs.js, which reads the Blob feed the daily cron
   // writes. Absolute rather than relative so the copies of this page served
   // from other origins reach the same feed; api/jobs.js sends CORS headers
   // for exactly that reason.
@@ -158,17 +191,19 @@
   var FILTER_KEY = "pipeline.filter.v1";
 
   var TIERS = {
-    1: { label: "Direct match", color: "var(--t1)" },
-    2: { label: "Strong fit",   color: "var(--t2)" },
-    3: { label: "Adjacent",     color: "var(--t3)" }
+    1: { label: "Direct match", color: "var(--t1)", bg: "var(--t1-bg)" },
+    2: { label: "Strong fit",   color: "var(--t2)", bg: "var(--t2-bg)" },
+    3: { label: "Adjacent",     color: "var(--t3)", bg: "var(--t3-bg)" }
   };
+  var UNRANKED = { label: "Unranked", color: "var(--line)", bg: "var(--surface-2)" };
   var FILTERS = [
-    { key: "open",      label: "Open" },
-    { key: "flagged",   label: "Flagged" },
-    { key: "applied",   label: "Applied" },
-    { key: "dismissed", label: "Dismissed" },
+    { key: "open",      label: "Open",      color: "var(--open)" },
+    { key: "flagged",   label: "Flagged",   color: "var(--flag)" },
+    { key: "applied",   label: "Applied",   color: "var(--applied)" },
+    { key: "dismissed", label: "Dismissed", color: "var(--dismissed)" },
     { key: "all",       label: "All" }
   ];
+  var STATE_LABEL = { flagged: "Flagged", applied: "Applied", dismissed: "Dismissed" };
 
   var listEl = document.getElementById("list");
   var chipsEl = document.getElementById("chips");
@@ -231,8 +266,21 @@
     var c = counts();
     chipsEl.innerHTML = FILTERS.map(function (f) {
       return '<button class="chip" type="button" data-filter="' + f.key + '" aria-pressed="' +
-        (filter === f.key) + '">' + esc(f.label) + '<span class="n mono">' + c[f.key] + "</span></button>";
+        (filter === f.key) + '">' +
+        (f.color ? '<span class="dot" style="--c: ' + f.color + '"></span>' : "") +
+        esc(f.label) + '<span class="n mono">' + c[f.key] + "</span></button>";
     }).join("");
+  }
+
+  function legend() {
+    var fit = [1, 2, 3].map(function (t) {
+      return '<span><i class="swatch" style="--c: ' + TIERS[t].color + '"></i>' + esc(TIERS[t].label) + "</span>";
+    }).join("");
+    var status = ["flagged", "applied", "dismissed"].map(function (k) {
+      return '<span><i class="swatch round" style="--c: var(--' + (k === "flagged" ? "flag" : k) + ')"></i>' +
+        STATE_LABEL[k] + "</span>";
+    }).join("");
+    return '<div class="legend" aria-label="Colour key"><b>Fit</b>' + fit + "<b>Status</b>" + status + "</div>";
   }
 
   function renderList() {
@@ -250,15 +298,13 @@
       return (a.tier || 9) - (b.tier || 9) || String(a.company).localeCompare(String(b.company));
     });
 
-    listEl.innerHTML = shown.map(function (j) {
+    listEl.innerHTML = legend() + shown.map(function (j) {
       var st = statusOf(j);
-      var tier = TIERS[j.tier] || { label: "Unranked", color: "var(--line)" };
-      var stateTag = st === "flagged"
-        ? '<span class="state flagged">Flagged</span>'
-        : st === "applied" ? '<span class="state applied">Applied</span>' : "";
+      var tier = TIERS[j.tier] || UNRANKED;
+      var stateTag = STATE_LABEL[st] ? '<span class="state ' + st + '">' + STATE_LABEL[st] + "</span>" : "";
       return '' +
-        '<article class="job' + (st === "dismissed" ? " is-dismissed" : "") +
-          '" style="--tier: ' + tier.color + '">' +
+        '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") +
+          '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
           '<div class="job-co">' + esc(j.company) + "</div>" +
           '<p class="job-title">' + esc(j.title) + "</p>" +
           (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") +
