@@ -5,6 +5,10 @@
     {
       "path": "/api/refresh",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/verify",
+      "schedule": "0 17 * * *"
     }
   ],
   "headers": [
@@ -20,6 +24,9 @@
   ],
   "functions": {
     "api/refresh.js": {
+      "maxDuration": 60
+    },
+    "api/verify.js": {
       "maxDuration": 60
     }
   }

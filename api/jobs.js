@@ -5,6 +5,7 @@
 
 import { readFeed } from "./_lib.js";
 import { categorize } from "./_category.js";
+import { readVerify } from "./verify.js";
 import { SEED } from "./_seed.js";
 
 // How old a posting is, in the terms that matter when deciding whether it is
@@ -18,13 +19,25 @@ function bucketOf(days) {
   return "over 3 months";
 }
 
+// A role still open but first posted this long ago is flagged on the page. It
+// stays on the shortlist, because old is not the same as closed.
+const OLD_AFTER_DAYS = 30;
+
+// Why the refresh marked a role dead, in words, for the page's Closed tag.
+function refreshReason(j) {
+  if (j.http_status === 404 || j.http_status === 410) return `link returns HTTP ${j.http_status}`;
+  if (j.redirected_to) return "link now redirects to the careers home page";
+  return "no longer listed on the employer's job board";
+}
+
 // No employer may occupy more than this many slots on the shortlist.
 const MAX_PER_COMPANY = 5;
 
 const BUCKET_ORDER = ["this week", "this month", "1-3 months", "over 3 months", "unknown"];
 
 export default async function handler(req, res) {
-  const feed = await readFeed();
+  const [feed, verify] = await Promise.all([readFeed(), readVerify()]);
+  const checks = verify?.results || {};
 
   // Before the first successful sweep there is no Blob object yet. Serving the
   // seed keeps the page populated rather than showing an empty list that looks
@@ -38,18 +51,35 @@ export default async function handler(req, res) {
 
   const now = Date.now();
   const jobs = body.jobs.map((j) => {
-    const stamp = j.posted_at || j.found_at || null;
+    const check = checks[j.id];
+    // The daily check reads the posting date from the platform itself, which
+    // beats the refresh's copy (Workday only gives "Posted 30+ Days Ago").
+    const posted = check?.posted_at || j.posted_at || null;
+    const stamp = posted || j.found_at || null;
     const days = stamp ? Math.floor((now - Date.parse(stamp)) / 86_400_000) : null;
+    // Closed on either count: the daily check found a closure notice, or the
+    // refresh found the link dead. Both are kept, never deleted.
+    const closed = check?.state === "closed"
+      ? { reason: check.reason, since: (check.closed_at || check.checked_at || "").slice(0, 10), by: "daily check" }
+      : j.live === false
+        ? { reason: refreshReason(j), since: j.checked_at || j.last_seen || null, by: "refresh" }
+        : null;
     return {
       ...j,
+      posted_at: posted,
       age_days: Number.isFinite(days) ? days : null,
       age_bucket: bucketOf(Number.isFinite(days) ? days : null),
+      // Only a real posting date counts. found_at is when WE first saw the
+      // role, which says nothing about how old the posting is.
+      old_posting: !closed && !!posted && Number.isFinite(days) && days >= OLD_AFTER_DAYS,
+      closed,
+      verified_at: check?.checked_at || null,
       // Derived on every read rather than stored, so a change to the rules
       // reaches every stored role at once. His overrides are applied by the
       // page, from api/overrides.js.
       category: categorize(j.title),
       // A single field the page can trust: worth showing, or not.
-      actionable: j.live !== false && !j.gated_out,
+      actionable: !closed && !j.gated_out,
     };
   });
 
@@ -98,6 +128,11 @@ export default async function handler(req, res) {
     ...body,
     jobs,
     actionable_count: jobs.filter((j) => j.actionable).length,
+    closed_count: jobs.filter((j) => j.closed).length,
+    old_after_days: OLD_AFTER_DAYS,
+    last_verified: verify?.last_run
+      ? { at: verify.last_run.finished_at, checked: verify.last_run.checked, newly_closed: verify.last_run.newly_closed.length }
+      : null,
     capped_count: jobs.filter((j) => j.capped).length,
     max_per_company: MAX_PER_COMPANY,
     by_company: Object.fromEntries(

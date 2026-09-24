@@ -9,11 +9,12 @@
 // names, nothing that is not already on the public dashboard.
 
 import { readFeed, readRunLog } from "./_lib.js";
+import { readVerify } from "./verify.js";
 
 const STALE_AFTER_HOURS = 30; // one daily run, plus slack for a late fire
 
 export default async function handler(req, res) {
-  const [run, feed] = await Promise.all([readRunLog(), readFeed()]);
+  const [run, feed, verify] = await Promise.all([readRunLog(), readFeed(), readVerify()]);
 
   const now = Date.now();
   const hoursSince = (iso) =>
@@ -52,5 +53,11 @@ export default async function handler(req, res) {
     last_run: run ?? null,
     hours_since_last_run: runAge,
     next_run: "daily at 16:00 UTC (18:00 Warsaw, 17:00 once Poland moves to CET)",
+    // The dead-role check that follows the refresh. newly_closed lists the
+    // roles it found closed on its last run; the daily email reads this.
+    last_verify: verify?.last_run ?? null,
+    hours_since_last_verify: hoursSince(verify?.last_run?.finished_at),
+    verify_history: verify?.history ?? [],
+    next_verify: "daily at 17:00 UTC, an hour after the refresh",
   });
 }

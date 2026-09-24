@@ -35,6 +35,9 @@
     --flag: #924300;       --flag-bg: #fdefd3;       --flag-line: #f0c67a;
     --applied: #146236;    --applied-bg: #dcf5e5;    --applied-line: #8fd3aa;
     --dismissed: #5c6679;  --dismissed-bg: #eceff4;  --dismissed-line: #c9d0db;
+    /* Set by the daily dead-role check, not by him */
+    --closed: #b3261e;     --closed-bg: #fde8e6;
+    --old: #7a5a12;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -59,6 +62,8 @@
       --flag: #f4bb55;       --flag-bg: #372709;       --flag-line: #6b4c14;
       --applied: #6ad8a0;    --applied-bg: #0e2e1f;    --applied-line: #1f5c3d;
       --dismissed: #a1abbb;  --dismissed-bg: #1f2632;  --dismissed-line: #3a4457;
+      --closed: #f2877e;     --closed-bg: #3a1614;
+      --old: #e3c27a;
     }
   }
   * { box-sizing: border-box; }
@@ -111,6 +116,7 @@
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
   .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
   .swatch.round { border-radius: 50%; }
+  .swatch.dash { background: transparent; border: 1.5px dashed var(--c); border-radius: 999px; width: 16px; }
   .swatch.mine { background: transparent; border: 1.5px solid var(--accent); border-radius: 999px; width: 16px; }
 
   .job {
@@ -140,6 +146,13 @@
   .state.flagged { color: var(--flag); background: var(--flag-bg); }
   .state.applied { color: var(--applied); background: var(--applied-bg); }
   .state.dismissed { color: var(--dismissed); background: var(--dismissed-bg); }
+  .state.closed { color: var(--closed); background: var(--closed-bg); }
+  .agetag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--old); border: 1px dashed currentColor; border-radius: 999px; padding: 2px 8px;
+  }
+  .job.is-closed { opacity: 0.72; }
+  .closed-why { font-size: 12.5px; color: var(--closed); margin: 7px 0 0; }
   .catsel {
     font: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted);
     background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%234a5f80'/%3E%3C/svg%3E") no-repeat right 8px center;
@@ -268,9 +281,11 @@
     { key: "flagged",   label: "Flagged",   color: "var(--flag)" },
     { key: "applied",   label: "Applied",   color: "var(--applied)" },
     { key: "dismissed", label: "Dismissed", color: "var(--dismissed)" },
+    { key: "closed",    label: "Closed",    color: "var(--closed)" },
     { key: "all",       label: "All" }
   ];
   var STATE_LABEL = { flagged: "Flagged", applied: "Applied", dismissed: "Dismissed" };
+  var OLD_DAYS = 30; // matches OLD_AFTER_DAYS in api/jobs.js
   // Must match api/_category.js; tests/category.test.mjs checks that it does.
   var CATEGORIES = [
     { key: "strategy",       label: "Strategy & Consulting" },
@@ -328,6 +343,11 @@
   // role marked elsewhere still shows its state on first visit.
   function statusOf(job) { return flags[job.id] || job.status || "new"; }
 
+  // Closed by the daily check or found dead by the refresh. Either way it is
+  // no longer a job he can apply to. The embedded copy predates `closed`, so
+  // `live` counts too.
+  function isClosed(job) { return !!job.closed || job.live === false; }
+
   function autoCategory(job) { return CAT_LABEL[job.category] ? job.category : "other"; }
   // An unsynced edit on this device wins over the server's copy; null in the
   // pending set means "back to automatic".
@@ -345,7 +365,12 @@
   function passes(job, skip) {
     if (skip !== "status" && filter !== "all") {
       var st = statusOf(job);
-      if (filter === "open" ? !(st === "new" || st === "flagged") : st !== filter) return false;
+      // Open is the working shortlist, so closed roles leave it. Flagged,
+      // Applied and Dismissed keep them, tagged, because what he marked still
+      // matters after the posting ends.
+      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job)) return false; }
+      else if (filter === "closed") { if (!isClosed(job)) return false; }
+      else if (st !== filter) return false;
     }
     if (skip !== "fit" && fitFilter !== "all" && String(job.tier) !== fitFilter) return false;
     if (skip !== "cat" && catFilter !== "all" && categoryOf(job) !== catFilter) return false;
@@ -353,12 +378,13 @@
   }
 
   function statusCounts() {
-    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, all: 0 };
+    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, closed: 0, all: 0 };
     jobs.forEach(function (j) {
       if (!passes(j, "status")) return;
       var st = statusOf(j);
       c.all++;
-      if (st === "new" || st === "flagged") c.open++;
+      if (isClosed(j)) c.closed++;
+      else if (st === "new" || st === "flagged") c.open++;
       if (st === "flagged") c.flagged++;
       if (st === "applied") c.applied++;
       if (st === "dismissed") c.dismissed++;
@@ -411,6 +437,8 @@
       return '<span><i class="swatch round" style="--c: var(--' + (k === "flagged" ? "flag" : k) + ')"></i>' +
         STATE_LABEL[k] + "</span>";
     }).join("");
+    status += '<span><i class="swatch round" style="--c: var(--closed)"></i>Closed</span>' +
+      '<span><i class="swatch dash" style="--c: var(--old)"></i>Posted ' + OLD_DAYS + "+ days ago</span>";
     return '<div class="legend" aria-label="Colour key"><b>Fit</b>' + fit + "<b>Status</b>" + status +
       '<b>Type</b><span><i class="swatch mine"></i>changed by you</span></div>';
   }
@@ -441,20 +469,30 @@
         "</b> right now. Try another filter.</p>";
       return;
     }
+    // Closed roles sink below open ones wherever both are shown.
     shown.sort(function (a, b) {
-      return (a.tier || 9) - (b.tier || 9) || String(a.company).localeCompare(String(b.company));
+      return (isClosed(a) - isClosed(b)) ||
+        (a.tier || 9) - (b.tier || 9) || String(a.company).localeCompare(String(b.company));
     });
 
     listEl.innerHTML = legend() + shown.map(function (j) {
       var st = statusOf(j);
       var tier = TIERS[j.tier] || UNRANKED;
       var stateTag = STATE_LABEL[st] ? '<span class="state ' + st + '">' + STATE_LABEL[st] + "</span>" : "";
+      var dead = isClosed(j);
+      if (dead) stateTag += '<span class="state closed">Closed</span>';
+      else if (j.old_posting) stateTag += '<span class="agetag" title="First posted ' + esc(String(j.posted_at || "").slice(0, 10)) +
+        '">Posted ' + esc(j.age_days) + "d ago</span>";
+      var why = dead
+        ? '<p class="closed-why">' + esc((j.closed && j.closed.reason) || "link no longer works") +
+          (j.closed && j.closed.since ? " \u00b7 found " + esc(String(j.closed.since).slice(0, 10)) : "") + "</p>"
+        : "";
       return '' +
-        '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") +
+        '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") + (dead ? " is-closed" : "") +
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
           '<div class="job-head"><div class="job-co">' + esc(j.company) + "</div>" + categorySelect(j) + "</div>" +
           '<p class="job-title">' + esc(j.title) + "</p>" +
-          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why +
           '<div class="job-foot">' +
             '<span class="tierpill">' + esc(tier.label) + "</span>" + stateTag +
             (j.found_at ? '<span class="found mono">' + esc(j.found_at) + "</span>" : "") +
