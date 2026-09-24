@@ -4,6 +4,7 @@
 // and so a failing board can never make the page go blank.
 
 import { readFeed } from "./_lib.js";
+import { categorize } from "./_category.js";
 import { SEED } from "./_seed.js";
 
 // How old a posting is, in the terms that matter when deciding whether it is
@@ -43,6 +44,10 @@ export default async function handler(req, res) {
       ...j,
       age_days: Number.isFinite(days) ? days : null,
       age_bucket: bucketOf(Number.isFinite(days) ? days : null),
+      // Derived on every read rather than stored, so a change to the rules
+      // reaches every stored role at once. His overrides are applied by the
+      // page, from api/overrides.js.
+      category: categorize(j.title),
       // A single field the page can trust: worth showing, or not.
       actionable: j.live !== false && !j.gated_out,
     };

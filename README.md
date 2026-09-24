@@ -114,6 +114,22 @@ vercel deploy --prod
 The scraper itself remains a working CLI (`main.py`) and is unaffected by
 any of this.
 
+### Dashboard environment variables
+
+| Variable | Used by | Purpose |
+| --- | --- | --- |
+| `BLOB_READ_WRITE_TOKEN` | all `api/` functions | Blob store holding the feed, run log and category overrides |
+| `CRON_SECRET` | `api/refresh.js` | Bearer token the daily cron sends |
+| `PIPELINE_EDIT_KEY` | `api/overrides.js` | Key the page asks for once per device before it syncs role-type changes. Keep it separate from `CRON_SECRET`, because this one gets typed into browsers |
+
+Role types (Strategy, Finance, Business Analysis, …) are set from the job
+title by `api/_category.js`. Changes made on the page are stored in
+`pipeline/overrides.json` and shared across devices. Until
+`PIPELINE_EDIT_KEY` is set, changes are saved only on the device where they
+were made.
+
+Node tests for the dashboard API: `cd tests && for t in *.test.mjs; do node $t; done`.
+
 ## Testing
 
 ```bash
