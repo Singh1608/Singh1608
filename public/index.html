@@ -90,27 +90,32 @@
   h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
   h1::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 0; }
-  .chips { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
-  .chip {
-    flex: 0 0 auto; font: inherit; font-size: 13px; font-weight: 600;
-    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
-    border-radius: 999px; padding: 7px 13px; min-height: 36px; cursor: pointer; white-space: nowrap;
+  /* Filter bar: four dropdowns, one row on desktop, two by two on a phone. */
+  .filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-bottom: 12px; }
+  .filters label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .filters .cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .fsel {
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); width: 100%;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5f80'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 28px 8px 10px; min-height: 40px;
+    appearance: none; -webkit-appearance: none; cursor: pointer; text-overflow: ellipsis;
   }
-  /* A pressed chip fills with its own colour code: a status colour, a fit
-     colour, or the accent where the chip has none. */
-  .chip[aria-pressed="true"] { background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); color: var(--accent-ink); }
-  .chip .n { opacity: 0.75; margin-left: 4px; }
-  .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--c, var(--muted)); }
-  .chip[aria-pressed="true"] .dot { background: var(--accent-ink); }
-  .chips.minor { margin-top: 0; padding-bottom: 8px; gap: 5px; }
-  .chips.minor .chip { font-size: 12.5px; padding: 5px 11px; min-height: 32px; }
-  .chip:focus-visible, .act:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .fsel.is-set { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .fsel:focus-visible, .act:focus-visible, a:focus-visible, .linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .filterline { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--muted); padding-bottom: 10px; }
+  .filterline[hidden] { display: none; }
+  .clear { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+  @media (max-width: 560px) { .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (prefers-color-scheme: dark) {
+    .fsel { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239fb3d1'/%3E%3C/svg%3E"); }
+  }
 
   main { padding-block: 14px 56px; }
 
+  .key { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .key summary { cursor: pointer; font-weight: 600; width: max-content; }
   .legend {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
-    font-size: 12px; color: var(--muted); margin: 0 0 12px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px;
   }
   .legend b { font-weight: 600; color: var(--ink); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -147,9 +152,11 @@
   .state.applied { color: var(--applied); background: var(--applied-bg); }
   .state.dismissed { color: var(--dismissed); background: var(--dismissed-bg); }
   .state.closed { color: var(--closed); background: var(--closed-bg); }
-  .agetag {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--old); border: 1px dashed currentColor; border-radius: 999px; padding: 2px 8px;
+  .age { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .age.old { color: var(--old); font-weight: 700; border: 1px dashed currentColor; border-radius: 999px; padding: 1px 8px; }
+  .newtag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 3px 8px;
   }
   .job.is-closed { opacity: 0.72; }
   .closed-why { font-size: 12.5px; color: var(--closed); margin: 7px 0 0; }
@@ -219,9 +226,8 @@
   <div class="wrap head-inner">
     <h1>Poland Role Pipeline</h1>
     <p class="sub" id="sub">English-speaking consulting, strategy and transformation roles.</p>
-    <div class="chips" id="chips" role="group" aria-label="Filter by status"></div>
-    <div class="chips minor" id="fitchips" role="group" aria-label="Filter by fit"></div>
-    <div class="chips minor" id="catchips" role="group" aria-label="Filter by role type"></div>
+    <div class="filters" id="filters" role="group" aria-label="Filters"></div>
+    <div class="filterline" id="filterline" hidden><span id="filtersummary"></span><button type="button" class="clear" id="clear">Clear filters</button></div>
   </div>
 </header>
 
@@ -264,6 +270,7 @@
   var FILTER_KEY = "pipeline.filter.v1";
   var FIT_KEY = "pipeline.fit.v1";
   var CAT_KEY = "pipeline.cat.v1";
+  var POSTED_KEY = "pipeline.posted.v1";
   // Category overrides: the last copy the server confirmed, the edits it has
   // not confirmed yet, and the key that lets this device write.
   var CAT_CACHE_KEY = "pipeline.categories.v1";
@@ -286,6 +293,17 @@
   ];
   var STATE_LABEL = { flagged: "Flagged", applied: "Applied", dismissed: "Dismissed" };
   var OLD_DAYS = 30; // matches OLD_AFTER_DAYS in api/jobs.js
+  var NEW_DAYS = 3;  // a role found this recently carries the New badge
+  // When a role was posted. Buckets are cumulative ("last 7 days" includes
+  // the last 24 hours) because that is how people search a job board.
+  var POSTED = [
+    { key: "any",   label: "Any time" },
+    { key: "new",   label: "New to you (found \u2264 " + NEW_DAYS + " days)" },
+    { key: "1",     label: "Last 24 hours" },
+    { key: "7",     label: "Last 7 days" },
+    { key: "30",    label: "Last 30 days" },
+    { key: "older", label: "Older than 30 days" }
+  ];
   // Must match api/_category.js; tests/category.test.mjs checks that it does.
   var CATEGORIES = [
     { key: "strategy",       label: "Strategy & Consulting" },
@@ -302,9 +320,9 @@
   CATEGORIES.forEach(function (c) { CAT_LABEL[c.key] = c.label; });
 
   var listEl = document.getElementById("list");
-  var chipsEl = document.getElementById("chips");
-  var fitEl = document.getElementById("fitchips");
-  var catEl = document.getElementById("catchips");
+  var filtersEl = document.getElementById("filters");
+  var filterLineEl = document.getElementById("filterline");
+  var summaryEl = document.getElementById("filtersummary");
   var subEl = document.getElementById("sub");
   var syncEl = document.getElementById("sync");
   var keyDlg = document.getElementById("keydlg");
@@ -318,6 +336,7 @@
   var filter = str(read(FILTER_KEY, "open"), "open");
   var fitFilter = str(read(FIT_KEY, "all"), "all");
   var catFilter = str(read(CAT_KEY, "all"), "all");
+  var postedFilter = str(read(POSTED_KEY, "any"), "any");
   var catOverrides = obj(read(CAT_CACHE_KEY, {}));
   var catPending = obj(read(CAT_PENDING_KEY, {}));
 
@@ -360,7 +379,45 @@
     return o && CAT_LABEL[o] ? o : autoCategory(job);
   }
 
-  // Each filter row counts what the *other* rows allow, so every number on a
+  // Whole days between a date and today. Date-only strings are read as local
+  // midnight so "posted today" does not flip at UTC midnight.
+  var DAY = 86400000;
+  function daysSince(stamp) {
+    if (!stamp) return null;
+    var s = String(stamp);
+    var t = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00:00").getTime() : Date.parse(s);
+    if (isNaN(t)) return null;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var then = new Date(t); then.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((today - then) / DAY));
+  }
+  // The employer's own posting date when there is one; otherwise when the
+  // pipeline first saw the role, labelled as such so the two never blur.
+  function ageOf(job) {
+    var posted = daysSince(job.posted_at);
+    if (posted !== null) return { days: posted, real: true };
+    var found = daysSince(job.found_at);
+    return found !== null ? { days: found, real: false } : null;
+  }
+  function isNew(job) {
+    var d = daysSince(job.found_at);
+    return d !== null && d <= NEW_DAYS && !isClosed(job);
+  }
+  function ageText(a) {
+    var verb = a.real ? "Posted " : "Found ";
+    if (a.days === 0) return verb + "today";
+    return verb + a.days + (a.days === 1 ? " day ago" : " days ago");
+  }
+  function postedMatches(job, key) {
+    if (key === "any") return true;
+    if (key === "new") return isNew(job);
+    var a = ageOf(job);
+    if (!a) return false;
+    if (key === "older") return a.days > 30;
+    return a.days <= Number(key);
+  }
+
+  // Each filter counts what the *other* filters allow, so every number on a
   // chip is exactly how many roles pressing it would show.
   function passes(job, skip) {
     if (skip !== "status" && filter !== "all") {
@@ -374,6 +431,7 @@
     }
     if (skip !== "fit" && fitFilter !== "all" && String(job.tier) !== fitFilter) return false;
     if (skip !== "cat" && catFilter !== "all" && categoryOf(job) !== catFilter) return false;
+    if (skip !== "posted" && !postedMatches(job, postedFilter)) return false;
     return true;
   }
 
@@ -402,31 +460,41 @@
     return c;
   }
 
-  function chip(attr, key, label, n, pressed, color) {
-    return '<button class="chip" type="button" data-' + attr + '="' + esc(key) + '" aria-pressed="' + pressed + '"' +
-      (color ? ' style="--c: ' + color + '"><span class="dot"></span>' : ">") +
-      esc(label) + '<span class="n mono">' + (n || 0) + "</span></button>";
+  function select(name, caption, value, options, isDefault) {
+    return '<label><span class="cap">' + esc(caption) + '</span><select class="fsel' + (isDefault ? "" : " is-set") +
+      '" data-f="' + name + '" aria-label="' + esc(caption) + '">' +
+      options.map(function (o) {
+        return '<option value="' + esc(o.key) + '"' + (o.key === value ? " selected" : "") + ">" +
+          esc(o.label) + (o.n == null ? "" : " (" + o.n + ")") + "</option>";
+      }).join("") + "</select></label>";
   }
 
-  function renderChips() {
+  function renderFilters() {
     var sc = statusCounts();
-    chipsEl.innerHTML = FILTERS.map(function (f) {
-      return chip("filter", f.key, f.label, sc[f.key], filter === f.key, f.color);
-    }).join("");
-
     var fc = tally("fit", function (j) { return String(j.tier); });
-    fitEl.innerHTML = chip("fit", "all", "All fits", fc.all, fitFilter === "all") +
-      [1, 2, 3].map(function (t) {
-        return chip("fit", String(t), TIERS[t].label, fc[t], fitFilter === String(t), TIERS[t].color);
-      }).join("");
-
-    // Only types that have roles under the other filters, plus the one
-    // selected, so the row stays short on a phone.
     var cc = tally("cat", categoryOf);
-    catEl.innerHTML = chip("cat", "all", "All types", cc.all, catFilter === "all") +
-      CATEGORIES.filter(function (c) { return cc[c.key] || catFilter === c.key; }).map(function (c) {
-        return chip("cat", c.key, c.label, cc[c.key], catFilter === c.key);
-      }).join("");
+    var pc = {};
+    POSTED.forEach(function (p) {
+      pc[p.key] = jobs.filter(function (j) { return passes(j, "posted") && postedMatches(j, p.key); }).length;
+    });
+
+    filtersEl.innerHTML =
+      select("status", "Status", filter, FILTERS.map(function (f) { return { key: f.key, label: f.label, n: sc[f.key] || 0 }; }), filter === "open") +
+      select("fit", "Fit", fitFilter, [{ key: "all", label: "All fits", n: fc.all }].concat([1, 2, 3].map(function (t) {
+        return { key: String(t), label: TIERS[t].label, n: fc[t] || 0 };
+      })), fitFilter === "all") +
+      // Only types with roles under the other filters, plus the selected one.
+      select("cat", "Type", catFilter, [{ key: "all", label: "All types", n: cc.all }].concat(
+        CATEGORIES.filter(function (c) { return cc[c.key] || catFilter === c.key; }).map(function (c) {
+          return { key: c.key, label: c.label, n: cc[c.key] || 0 };
+        })), catFilter === "all") +
+      select("posted", "Posted", postedFilter, POSTED.map(function (p) {
+        return { key: p.key, label: p.label, n: pc[p.key] };
+      }), postedFilter === "any");
+
+    var active = filter !== "open" || fitFilter !== "all" || catFilter !== "all" || postedFilter !== "any";
+    filterLineEl.hidden = !active;
+    if (active) summaryEl.textContent = jobs.filter(function (j) { return passes(j); }).length + " roles match";
   }
 
   function legend() {
@@ -439,8 +507,9 @@
     }).join("");
     status += '<span><i class="swatch round" style="--c: var(--closed)"></i>Closed</span>' +
       '<span><i class="swatch dash" style="--c: var(--old)"></i>Posted ' + OLD_DAYS + "+ days ago</span>";
-    return '<div class="legend" aria-label="Colour key"><b>Fit</b>' + fit + "<b>Status</b>" + status +
-      '<b>Type</b><span><i class="swatch mine"></i>changed by you</span></div>';
+    return '<details class="key"><summary>Colour key</summary><div class="legend"><b>Fit</b>' + fit + "<b>Status</b>" + status +
+      '<b>Type</b><span><i class="swatch mine"></i>changed by you</span>' +
+      '<span><i class="newtag">New</i>found in the last ' + NEW_DAYS + " days</span></div></details>";
   }
 
   function categorySelect(j) {
@@ -465,14 +534,20 @@
       var parts = [labelOf(FILTERS, filter)];
       if (fitFilter !== "all") parts.push(TIERS[fitFilter] ? TIERS[fitFilter].label : fitFilter);
       if (catFilter !== "all") parts.push(CAT_LABEL[catFilter] || catFilter);
+      if (postedFilter !== "any") parts.push(labelOf(POSTED, postedFilter));
       listEl.innerHTML = legend() + '<p class="note">Nothing under <b>' + esc(parts.join(" · ")) +
         "</b> right now. Try another filter.</p>";
       return;
     }
     // Closed roles sink below open ones wherever both are shown.
     shown.sort(function (a, b) {
+      // Within a fit tier, newest first: a fresh posting is worth more
+      // attention than an old one at the same fit.
+      var aa = ageOf(a), ab = ageOf(b);
       return (isClosed(a) - isClosed(b)) ||
-        (a.tier || 9) - (b.tier || 9) || String(a.company).localeCompare(String(b.company));
+        (a.tier || 9) - (b.tier || 9) ||
+        ((aa ? aa.days : 9999) - (ab ? ab.days : 9999)) ||
+        String(a.company).localeCompare(String(b.company));
     });
 
     listEl.innerHTML = legend() + shown.map(function (j) {
@@ -481,8 +556,11 @@
       var stateTag = STATE_LABEL[st] ? '<span class="state ' + st + '">' + STATE_LABEL[st] + "</span>" : "";
       var dead = isClosed(j);
       if (dead) stateTag += '<span class="state closed">Closed</span>';
-      else if (j.old_posting) stateTag += '<span class="agetag" title="First posted ' + esc(String(j.posted_at || "").slice(0, 10)) +
-        '">Posted ' + esc(j.age_days) + "d ago</span>";
+      else if (isNew(j)) stateTag = '<span class="newtag">New</span>' + stateTag;
+      var age = ageOf(j);
+      var ageTag = age ? '<span class="age' + (age.real && age.days >= OLD_DAYS && !dead ? " old" : "") + '" title="' +
+        (age.real ? "Employer posting date " + esc(String(j.posted_at).slice(0, 10)) : "No posting date given; first found " + esc(j.found_at)) +
+        '">' + esc(ageText(age)) + "</span>" : "";
       var why = dead
         ? '<p class="closed-why">' + esc((j.closed && j.closed.reason) || "link no longer works") +
           (j.closed && j.closed.since ? " \u00b7 found " + esc(String(j.closed.since).slice(0, 10)) : "") + "</p>"
@@ -495,7 +573,7 @@
           (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why +
           '<div class="job-foot">' +
             '<span class="tierpill">' + esc(tier.label) + "</span>" + stateTag +
-            (j.found_at ? '<span class="found mono">' + esc(j.found_at) + "</span>" : "") +
+            ageTag +
             '<span class="spacer"></span>' +
             '<a class="open" href="' + esc(j.url) + '" target="_blank" rel="noopener">Open &rarr;</a>' +
           "</div>" +
@@ -516,7 +594,7 @@
     return key;
   }
 
-  function render() { renderChips(); renderList(); }
+  function render() { renderFilters(); renderList(); }
 
   function showUpdated(stamp, n) {
     if (!stamp) return;
@@ -633,12 +711,20 @@
 
   // --- events -----------------------------------------------------------------
 
-  document.querySelector("header").addEventListener("click", function (e) {
-    var btn = e.target.closest(".chip");
-    if (!btn) return;
-    if (btn.dataset.filter) { filter = btn.dataset.filter; write(FILTER_KEY, filter); }
-    if (btn.dataset.fit) { fitFilter = btn.dataset.fit; write(FIT_KEY, fitFilter); }
-    if (btn.dataset.cat) { catFilter = btn.dataset.cat; write(CAT_KEY, catFilter); }
+  filtersEl.addEventListener("change", function (e) {
+    var sel = e.target.closest(".fsel");
+    if (!sel) return;
+    var v = sel.value;
+    if (sel.dataset.f === "status") { filter = v; write(FILTER_KEY, v); }
+    if (sel.dataset.f === "fit") { fitFilter = v; write(FIT_KEY, v); }
+    if (sel.dataset.f === "cat") { catFilter = v; write(CAT_KEY, v); }
+    if (sel.dataset.f === "posted") { postedFilter = v; write(POSTED_KEY, v); }
+    render();
+  });
+
+  document.getElementById("clear").addEventListener("click", function () {
+    filter = "open"; fitFilter = "all"; catFilter = "all"; postedFilter = "any";
+    [FILTER_KEY, FIT_KEY, CAT_KEY, POSTED_KEY].forEach(function (k, i) { write(k, ["open", "all", "all", "any"][i]); });
     render();
   });
 

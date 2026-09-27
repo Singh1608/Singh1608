@@ -69,10 +69,13 @@ res = mkRes();
 await refresh({ headers: { authorization: "Bearer wrong" } }, res);
 console.log(`2. wrong auth         -> ${res.code} ${res.code === 401 ? "PASS" : "FAIL"}`);
 
-// 3. first run: seeds 19, adds the one good capco role, rejects the other three
+// 3. first run: seeds 19, adds the one good capco role, rejects the other three.
+// Started with the dashboard edit key rather than the cron secret: an
+// on-demand scrape must work the same way. Later runs use the cron secret.
 const auth = { headers: { authorization: "Bearer s3cret" } };
+process.env.PIPELINE_EDIT_KEY = "edit-key";
 res = mkRes();
-await refresh(auth, res);
+await refresh({ headers: { authorization: "Bearer edit-key" } }, res);
 const r1 = res.body;
 console.log(`3. first run          -> before=${r1.before} after=${r1.after} added=${r1.added.length} ${r1.before === 10 && r1.after === 11 && r1.added.length === 1 ? "PASS" : "FAIL"}`);
 console.log(`   added: ${r1.added[0]}`);

@@ -13,15 +13,23 @@
 
 import { checkAllLive, fetchAll, jobId, keep, readFeed, writeFeed, writeRunLog } from "./_lib.js";
 import { assess, explain } from "./_fit.js";
+import { keyMatches } from "./overrides.js";
 import { SEED } from "./_seed.js";
 
+// The cron sends CRON_SECRET. He can also start a scrape on demand with the
+// edit key the dashboard already asks for (api/overrides.js), the same way
+// api/verify.js allows it, so "scrape now" never needs the cron secret to
+// leave Vercel. A run only reads public job boards and appends to the feed.
 function unauthorized(req) {
-  const expected = process.env.CRON_SECRET;
+  const cron = process.env.CRON_SECRET;
+  const edit = process.env.PIPELINE_EDIT_KEY;
   // With no secret configured the endpoint would be an open trigger for
   // anyone who guessed the path. Refuse rather than run unprotected.
-  if (!expected) return "CRON_SECRET is not configured";
-  const got = req.headers.authorization || "";
-  return got === `Bearer ${expected}` ? null : "bad or missing authorization";
+  if (!cron && !edit) return "CRON_SECRET is not configured";
+  const got = (req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!got) return "bad or missing authorization";
+  if ((cron && keyMatches(got, cron)) || (edit && keyMatches(got, edit))) return null;
+  return "bad or missing authorization";
 }
 
 // Persist the outcome, then answer. A failure to store the log must not mask
