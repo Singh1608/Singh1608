@@ -41,6 +41,10 @@ export function bandOf(total) {
 //   none        not in his record at all: scores zero
 // Both zero-scoring kinds still count as asked-for, so a posting built around
 // tools he lacks scores low rather than being judged on what little matched.
+//
+// `generic` marks asks that nearly every posting makes (stakeholders,
+// reporting, Excel). They say nothing about fit, so they are left out of the
+// ratio entirely; counting them let an operations role score 40/40.
 export const SKILLS = [
   // Production: FAB, Al-Ghurair, Deloitte
   { key: "strategy", label: "corporate / business strategy", evidence: "production",
@@ -62,7 +66,7 @@ export const SKILLS = [
     re: /\b(cost (reduction|optimi[sz]ation|transformation|efficiency)|savings|procurement)\b/i },
   { key: "shared_services", label: "shared services / GBS", evidence: "production",
     re: /\b(shared services?|gbs|global business services|offshoring|centre of excellence)\b/i },
-  { key: "stakeholder", label: "senior stakeholder management", evidence: "production",
+  { key: "stakeholder", label: "senior stakeholder management", evidence: "production", generic: true,
     re: /\bstakeholders?\b/i },
   { key: "uat", label: "UAT and test design", evidence: "production",
     re: /\b(uat|user acceptance|test (cases|scripts|coverage|scenarios)|testing)\b/i },
@@ -70,20 +74,20 @@ export const SKILLS = [
     re: /\b(workday|erp|adaptive planning)\b/i },
   { key: "integration", label: "system integrations and data migration", evidence: "production",
     re: /\b(integrations?|data migration|interfaces|xml|eib|apis?)\b/i },
-  { key: "excel", label: "Excel / VBA", evidence: "production", re: /\b(excel|vba|macros?)\b/i },
-  { key: "reporting", label: "reporting, KPIs and dashboards", evidence: "production",
+  { key: "excel", label: "Excel / VBA", evidence: "production", generic: true, re: /\b(excel|vba|macros?)\b/i },
+  { key: "reporting", label: "reporting, KPIs and dashboards", evidence: "production", generic: true,
     re: /\b(reporting|dashboards?|kpis?|scorecards?|management information)\b/i },
-  { key: "analysis", label: "data and spend analysis", evidence: "production",
+  { key: "analysis", label: "data and spend analysis", evidence: "production", generic: true,
     re: /\b(data analysis|analytics|analytical|spend analysis)\b/i },
   { key: "payments", label: "payments (ACH, clearing)", evidence: "production",
-    re: /\b(payments?|ach|sepa|nacha|clearing|settlement)\b/i },
+    re: /\b(payments?|ach|sepa|nacha|clearing)\b/i },
   { key: "banking", label: "banking, treasury and trade finance", evidence: "production",
     re: /\b(banking|corporate bank\w*|wholesale|treasury|trade finance|lending|cash management)\b/i },
   { key: "finance_transformation", label: "finance function transformation", evidence: "production",
     re: /\b(finance transformation|finance function|cfo|record to report|r2r|general ledger|financial close)\b/i },
   { key: "automation", label: "process automation", evidence: "production",
     re: /\b(automation|automat(e|ing) (processes|workflows?)|rpa)\b/i },
-  { key: "presentations", label: "executive decks and storylining", evidence: "production",
+  { key: "presentations", label: "executive decks and storylining", evidence: "production", generic: true,
     re: /\b(powerpoint|presentations?|storyline\w*|executive (communication|materials))\b/i },
 
   // Listed only: on the CV or a course, never used in a paid role. Scores zero.
@@ -113,6 +117,19 @@ export const SKILLS = [
   { key: "supply_chain", label: "supply chain", evidence: "none", re: /\b(supply chain|logistics|s&op)\b/i },
   { key: "data_engineering", label: "data engineering", evidence: "none",
     re: /\b(data engineering|etl|data pipelines?|data warehous\w*|databricks|snowflake)\b/i },
+  // Specialist banking and insurance platforms and functions. Without these a
+  // "Business Analyst – Avaloq" read as a perfect match: the platform it is
+  // built around was simply not a word the score knew.
+  { key: "core_platforms", label: "core banking / investment platforms (Avaloq, Temenos, Murex, SimCorp …)", evidence: "none",
+    re: /\b(avaloq|temenos|t24|finacle|flexcube|murex|calypso|simcorp|charles river|aladdin|bloomberg aim|summit|guidewire|duck creek)\b/i },
+  { key: "securities_ops", label: "securities operations (custody, fund accounting, NAV)", evidence: "none",
+    re: /\b(custody|depositary|fund (accounting|administration|services)|nav\b|net asset value|securities (settlement|operations|services)|corporate actions|trade (settlement|lifecycle|support)|middle office|back office|reconciliations?)\b/i },
+  { key: "markets", label: "capital markets and trading", evidence: "none",
+    re: /\b(capital markets|trading|derivatives|fixed income|equities|front office|treasury management systems?|fx (trading|products))\b/i },
+  { key: "insurance_ops", label: "insurance operations (underwriting, claims, policy admin)", evidence: "none",
+    re: /\b(underwriting|claims (handling|management|processing)|policy administration|actuarial|reinsurance)\b/i },
+  { key: "accounting", label: "accounting qualification (ACCA, CIMA, CPA)", evidence: "none",
+    re: /\b(acca|cima|cpa|chartered accountant|statutory accounts|us gaap)\b/i },
 ];
 
 // Fewer asks than this and the skills part is scaled down: a posting too thin
@@ -161,7 +178,9 @@ function levelFromYears(y) {
 const FS_COMPANY = /\b(capco|bank|banking|citi|citibank|goldman|ubs|ing|nordea|santander|mastercard|visa|revolut|wise|klarna|n26|adyen|sumup|hsbc|jp ?morgan|bnp|societe generale|soci[eé]t[eé] g[eé]n[eé]rale|credit suisse|deutsche bank|commerzbank|pekao|pko|mbank|millennium|state street|northern trust|bny|lombard|allianz|axa|generali|aviva|zurich|swiss re|munich re)\b/i;
 const FS_TEXT = /\b(banks?|banking|financial services|financial institutions?|payments?|capital markets|treasury|wholesale|insurance|insurers?|fintech|cards|asset management|wealth management|lending)\b/gi;
 const CORE_FUNCTION = /\b(strategy|strategic|transformation|operating model|finance transformation|cfo|pmo|programme|program management|process excellence|operational excellence|management consult\w*)\b/i;
-const NEAR_FUNCTION = /\b(business analy\w*|project manage\w*|change manage\w*|process|operations)\b/i;
+const NEAR_FUNCTION = /\b(business analy\w*|project manage\w*|change manage\w*|process)\b/i;
+// Titles for jobs that run a function rather than change it.
+const OFF_FUNCTION = /\b(operations (specialist|analyst|associate)|depositary|custody|fund account\w*|underwriter|developer|engineer|architect|administrator|support|accountant|auditor|sales|recruit\w*|expert)\b/i;
 
 // --- 4. practical ----------------------------------------------------------------
 
@@ -201,7 +220,7 @@ export function extractFeatures(text = "", meta = {}) {
     fs_mentions: fsMentions,
     mismatch,
     warsaw: WARSAW.test(body),
-    core_function: CORE_FUNCTION.test(body),
+    core_mentions: (body.match(new RegExp(CORE_FUNCTION.source, "gi")) || []).length,
   };
 }
 
@@ -222,14 +241,16 @@ export function scoreRole(job, features) {
   for (const s of SKILLS) if (s.re.test(title)) asked.add(s.key);
   const bySkill = Object.fromEntries(SKILLS.map((s) => [s.key, s]));
   const matched = [], listedOnly = [], missing = [];
+  let counted = 0;
   for (const k of asked) {
     const s = bySkill[k];
-    if (!s) continue;
+    if (!s || s.generic) continue;
+    counted++;
     if (s.evidence === "production") matched.push(s.label);
     else if (s.evidence === "listed") listedOnly.push(s.label);
     else missing.push(s.label);
   }
-  const skills = Math.round(WEIGHTS.skills * matched.length / Math.max(asked.size, MIN_ASKS));
+  const skills = Math.round(WEIGHTS.skills * matched.length / Math.max(counted, MIN_ASKS));
 
   // Seniority: the stricter of what the title and the posting say. With only
   // one of them, capped below full marks; with neither, low.
@@ -268,7 +289,12 @@ export function scoreRole(job, features) {
     industry = basis === "posting" ? 6 : 5;
     domainNote = "industry outside his record, not a mismatch";
   }
-  const fn = CORE_FUNCTION.test(title) || f.core_function ? 6 : NEAR_FUNCTION.test(title) ? 4 : 1;
+  // Function from the title first. The body can lift a neutral title, but
+  // only when it keeps coming back to strategy or transformation work.
+  const fn = CORE_FUNCTION.test(title) ? 6
+    : OFF_FUNCTION.test(title) ? 0
+    : NEAR_FUNCTION.test(title) || (f.core_mentions || 0) >= 4 ? 4
+    : 1;
   const domain = industry + fn;
 
   // Practical: location (8), work mode stated (3), salary stated (4).

@@ -87,6 +87,20 @@ const titleOnly = scoreRole({ title: "Business Transformation Consultant", compa
 check("title-only scoring is marked as such", titleOnly.basis === "title only");
 check("title-only skills are scaled down", titleOnly.parts.skills.score <= 14, JSON.stringify(titleOnly.parts.skills));
 
+// 8b. Calibration found on the live feed.
+const avaloq = scoreRole({ title: "Business Analyst - Avaloq", company: "Capco", location: "Warsaw" },
+  extractFeatures("Implement Avaloq core banking for private banks. Business process analysis, requirements, testing, stakeholders. ".repeat(6)));
+check("a platform he never used counts as missing", avaloq.parts.skills.missing.some((m) => /Avaloq/.test(m)), JSON.stringify(avaloq.parts.skills));
+const generic = scoreRole({ title: "Consultant", company: "Acme", location: "Warsaw" },
+  extractFeatures("Stakeholder management, reporting, Excel, PowerPoint presentations and data analysis. ".repeat(8)));
+check("generic asks (stakeholders, Excel, reporting) are not credited", generic.parts.skills.score === 0, JSON.stringify(generic.parts.skills));
+const ops = scoreRole({ title: "Depositary Operations Specialist, Senior Associate", company: "State Street", location: "Kraków" },
+  extractFeatures("Depositary oversight, NAV checks, fund accounting and reconciliations. Strategy. ".repeat(8)));
+check("an operations-run role gets no function credit", ops.parts.domain.score === 14, ops.parts.domain.note + " " + ops.parts.domain.score);
+check("securities operations counts as missing", ops.parts.skills.missing.some((m) => /securities operations/.test(m)));
+const opsX = scoreRole({ title: "Operations Transformation Expert", company: "Acme", location: "Warsaw" }, null);
+check("a transformation title outranks the 'expert' ops rule", opsX.parts.domain.score >= 6 + 5, String(opsX.parts.domain.score));
+
 // 9. Bands.
 check("bands cover 0-100 in order", bandOf(100) === "strong" && bandOf(0) === "long" && bandOf(BANDS[1].min) === BANDS[1].key);
 
