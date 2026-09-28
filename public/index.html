@@ -92,8 +92,8 @@
   h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
   h1::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 0; }
-  /* Filter bar: four dropdowns, one row on desktop, two by two on a phone. */
-  .filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-bottom: 12px; }
+  /* Filter bar: five dropdowns, one row on desktop, two per row on a phone. */
+  .filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-bottom: 12px; }
   .filters label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .filters .cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .fsel {
@@ -286,6 +286,7 @@
   var FIT_KEY = "pipeline.fit.v2";
   var CAT_KEY = "pipeline.cat.v1";
   var POSTED_KEY = "pipeline.posted.v1";
+  var VERDICT_KEY = "pipeline.verdict.v1";
   // Category overrides: the last copy the server confirmed, the edits it has
   // not confirmed yet, and the key that lets this device write.
   var CAT_CACHE_KEY = "pipeline.categories.v1";
@@ -336,6 +337,7 @@
     { key: "applied",   label: "Applied",   color: "var(--applied)" },
     { key: "dismissed", label: "Dismissed", color: "var(--dismissed)" },
     { key: "closed",    label: "Closed",    color: "var(--closed)" },
+    { key: "excluded",  label: "Excluded",  color: "var(--closed)" },
     { key: "all",       label: "All" }
   ];
   var STATE_LABEL = { flagged: "Flagged", applied: "Applied", dismissed: "Dismissed" };
@@ -384,6 +386,16 @@
   var fitFilter = str(read(FIT_KEY, "all"), "all");
   var catFilter = str(read(CAT_KEY, "all"), "all");
   var postedFilter = str(read(POSTED_KEY, "any"), "any");
+  var verdictFilter = str(read(VERDICT_KEY, "all"), "all");
+  // The morning head-hunt's verdicts, in the order he would act on them.
+  var VERDICTS = [
+    { key: "tailor",   label: "Apply + tailor", verdict: "APPLY + TAILOR" },
+    { key: "apply",    label: "Apply",          verdict: "APPLY" },
+    { key: "stretch",  label: "Stretch",        verdict: "STRETCH" },
+    { key: "skip",     label: "Skip",           verdict: "SKIP" },
+    { key: "excluded", label: "Excluded",       verdict: "EXCLUDED" },
+    { key: "none",     label: "Not head-hunted yet" }
+  ];
   var catOverrides = obj(read(CAT_CACHE_KEY, {}));
   var catPending = obj(read(CAT_PENDING_KEY, {}));
 
@@ -413,6 +425,20 @@
   // no longer a job he can apply to. The embedded copy predates `closed`, so
   // `live` counts too.
   function isClosed(job) { return !!job.closed || job.live === false; }
+
+  // Out for him whatever the score: the posting requires a language he does
+  // not speak, or the head-hunt found another hard bar (an internal-only
+  // posting, say). Kept and filterable, never deleted, in case a reading was wrong.
+  function isExcluded(job) { return !!job.excluded || !!(job.deep && job.deep.verdict === "EXCLUDED"); }
+  function excludedWhy(job) {
+    if (job.excluded) return job.excluded;
+    return job.deep && job.deep.gap ? job.deep.gap : "excluded by the head-hunt";
+  }
+  function verdictOf(job) {
+    var v = job.deep && job.deep.verdict;
+    for (var i = 0; i < VERDICTS.length; i++) if (VERDICTS[i].verdict && VERDICTS[i].verdict === v) return VERDICTS[i].key;
+    return "none";
+  }
 
   function autoCategory(job) { return CAT_LABEL[job.category] ? job.category : "other"; }
   // An unsynced edit on this device wins over the server's copy; null in the
@@ -474,24 +500,27 @@
       // matters after the posting ends.
       // A role requiring a language he does not speak leaves Open too, but
       // stays under All with the reason, in case the reading was wrong.
-      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job) || job.excluded) return false; }
+      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job) || isExcluded(job)) return false; }
       else if (filter === "closed") { if (!isClosed(job)) return false; }
+      else if (filter === "excluded") { if (!isExcluded(job)) return false; }
       else if (st !== filter) return false;
     }
     if (skip !== "fit" && fitFilter !== "all" && bandOf(job) !== fitFilter) return false;
     if (skip !== "cat" && catFilter !== "all" && categoryOf(job) !== catFilter) return false;
     if (skip !== "posted" && !postedMatches(job, postedFilter)) return false;
+    if (skip !== "verdict" && verdictFilter !== "all" && verdictOf(job) !== verdictFilter) return false;
     return true;
   }
 
   function statusCounts() {
-    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, closed: 0, all: 0 };
+    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, closed: 0, excluded: 0, all: 0 };
     jobs.forEach(function (j) {
       if (!passes(j, "status")) return;
       var st = statusOf(j);
       c.all++;
+      if (isExcluded(j)) c.excluded++;
       if (isClosed(j)) c.closed++;
-      else if ((st === "new" || st === "flagged") && !j.excluded) c.open++;
+      else if ((st === "new" || st === "flagged") && !isExcluded(j)) c.open++;
       if (st === "flagged") c.flagged++;
       if (st === "applied") c.applied++;
       if (st === "dismissed") c.dismissed++;
@@ -522,6 +551,7 @@
     var sc = statusCounts();
     var fc = tally("fit", bandOf);
     var cc = tally("cat", categoryOf);
+    var vc = tally("verdict", verdictOf);
     var pc = {};
     POSTED.forEach(function (p) {
       pc[p.key] = jobs.filter(function (j) { return passes(j, "posted") && postedMatches(j, p.key); }).length;
@@ -540,9 +570,12 @@
         })), catFilter === "all") +
       select("posted", "Posted", postedFilter, POSTED.map(function (p) {
         return { key: p.key, label: p.label, n: pc[p.key] };
-      }), postedFilter === "any");
+      }), postedFilter === "any") +
+      select("verdict", "Head-hunt", verdictFilter, [{ key: "all", label: "All verdicts", n: vc.all }].concat(VERDICTS.map(function (v) {
+        return { key: v.key, label: v.label, n: vc[v.key] || 0 };
+      })), verdictFilter === "all");
 
-    var active = filter !== "open" || fitFilter !== "all" || catFilter !== "all" || postedFilter !== "any";
+    var active = filter !== "open" || fitFilter !== "all" || catFilter !== "all" || postedFilter !== "any" || verdictFilter !== "all";
     filterLineEl.hidden = !active;
     if (active) summaryEl.textContent = jobs.filter(function (j) { return passes(j); }).length + " roles match";
   }
@@ -585,6 +618,7 @@
       if (fitFilter !== "all") parts.push(bandInfo(fitFilter).label);
       if (catFilter !== "all") parts.push(CAT_LABEL[catFilter] || catFilter);
       if (postedFilter !== "any") parts.push(labelOf(POSTED, postedFilter));
+      if (verdictFilter !== "all") parts.push(labelOf(VERDICTS, verdictFilter));
       listEl.innerHTML = legend() + '<p class="note">Nothing under <b>' + esc(parts.join(" · ")) +
         "</b> right now. Try another filter.</p>";
       return;
@@ -616,7 +650,7 @@
       var why = dead
         ? '<p class="closed-why">' + esc((j.closed && j.closed.reason) || "link no longer works") +
           (j.closed && j.closed.since ? " \u00b7 found " + esc(String(j.closed.since).slice(0, 10)) : "") + "</p>"
-        : j.excluded ? '<p class="closed-why">Not for you: ' + esc(j.excluded) + "</p>" : "";
+        : isExcluded(j) ? '<p class="closed-why">Excluded: ' + esc(excludedWhy(j)) + "</p>" : "";
       return '' +
         '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") + (dead ? " is-closed" : "") +
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
@@ -803,12 +837,13 @@
     if (sel.dataset.f === "fit") { fitFilter = v; write(FIT_KEY, v); }
     if (sel.dataset.f === "cat") { catFilter = v; write(CAT_KEY, v); }
     if (sel.dataset.f === "posted") { postedFilter = v; write(POSTED_KEY, v); }
+    if (sel.dataset.f === "verdict") { verdictFilter = v; write(VERDICT_KEY, v); }
     render();
   });
 
   document.getElementById("clear").addEventListener("click", function () {
-    filter = "open"; fitFilter = "all"; catFilter = "all"; postedFilter = "any";
-    [FILTER_KEY, FIT_KEY, CAT_KEY, POSTED_KEY].forEach(function (k, i) { write(k, ["open", "all", "all", "any"][i]); });
+    filter = "open"; fitFilter = "all"; catFilter = "all"; postedFilter = "any"; verdictFilter = "all";
+    [FILTER_KEY, FIT_KEY, CAT_KEY, POSTED_KEY, VERDICT_KEY].forEach(function (k, i) { write(k, ["open", "all", "all", "any", "all"][i]); });
     render();
   });
 
