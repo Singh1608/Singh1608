@@ -130,6 +130,8 @@ check("soft or adjectival language mentions are not", SOFTS.every((t) => languag
   JSON.stringify(SOFTS.map((t) => languagesRequired(t))));
 const pl = scoreRole({ title: "Management Consultant", company: "Adaptovate", location: "Warsaw" },
   extractFeatures("Fluent Polish and strong English. ".repeat(20)));
+const oneLine = "Nice to have: Agile, a plus. Requirements: 3-6 years of experience Fluent Polish and strong English Strong problem-solving We offer Polish language classes and private medical care, preferred partners";
+check("a requirement on a one-line page is still caught", languagesRequired(oneLine).includes("Polish"), JSON.stringify(languagesRequired(oneLine)));
 check("a required language excludes the role", pl.excluded === "posting requires Polish", String(pl.excluded));
 
 // 9. Bands.

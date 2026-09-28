@@ -207,12 +207,17 @@ const REQUIRED_AFTER = new RegExp(`\\b(${LANGS})\\b[^.;•\\n]{0,40}?\\b(require
 export function languagesRequired(text = "") {
   const found = new Set();
   if (/znajomo[sś][cć] j[eę]zyka polskiego|j[eę]zyk polski|bieg[lł]a znajomo[sś][cć] polskiego/i.test(text)) found.add("Polish");
-  for (const raw of String(text).split(/\n+|(?<=[.;•])\s+/)) {
-    const line = raw.replace(NOT_LANGUAGE, " ");
-    if (!new RegExp(`\\b(${LANGS})\\b`, "i").test(line) || SOFT.test(line)) continue;
-    for (const re of [REQUIRED_BEFORE, REQUIRED_AFTER]) {
-      const m = line.match(re);
-      if (!m) continue;
+  // Judge each mention by the words right around it, not by its whole line:
+  // page-scraped postings arrive as one long line, and a "plus" anywhere on
+  // it would otherwise hide a "Fluent Polish" requirement.
+  const body = String(text).replace(NOT_LANGUAGE, " ");
+  for (const re of [REQUIRED_BEFORE, REQUIRED_AFTER]) {
+    const g = new RegExp(re.source, "gi");
+    for (const m of body.matchAll(g)) {
+      // The clause holding the match, plus the rest of its sentence.
+      const at = body.slice(m.index, m.index + m[0].length + 60).split(/[.;•\n]/)[0];
+      const before = body.slice(Math.max(0, m.index - 30), m.index).split(/[.;•\n]/).pop();
+      if (SOFT.test(`${before} ${at}`)) continue;
       const lang = (m[2] && new RegExp(`^(${LANGS})$`, "i").test(m[2]) ? m[2] : m[1]).toLowerCase();
       found.add(lang.charAt(0).toUpperCase() + lang.slice(1));
     }
