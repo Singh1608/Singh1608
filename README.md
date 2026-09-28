@@ -161,6 +161,21 @@ posting's text and a `needs_scoring` flag. `POST` stores the deep scores in
 `pipeline/headhunt.json`, and the page shows them on each card. Both need
 `PIPELINE_EDIT_KEY`.
 
+Each card also shows an **ATS keyword match** (`api/_ats.js`). Recruiters search
+an applicant tracking system like a database, by exact job title and exact skill
+strings, so a resume that uses a synonym is never surfaced. The daily check
+records which searchable terms the posting uses, in the posting's own spelling
+(`ats_terms` in the stored features). The page splits them three ways:
+
+- already on his resume;
+- true for him, but not yet worded that way (`EVIDENCE_TERMS`);
+- not in his record.
+
+It also shows the headline to put under his name, which is the posting's exact
+title without pronoun or gender tags. A tailored resume aims for 25–35 of the
+posting's terms, woven into real bullets. `api/_resume_terms.js` holds the term
+lists and nothing else; it is generated from the private resume kit.
+
 Node tests for the dashboard API: `cd tests && for t in *.test.mjs; do node $t; done`.
 
 ## Testing

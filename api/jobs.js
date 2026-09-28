@@ -6,6 +6,7 @@
 import { readBlob, readFeed } from "./_lib.js";
 import { categorize } from "./_category.js";
 import { scoreRole } from "./_headhunter.js";
+import { atsMatch } from "./_ats.js";
 import { readVerify } from "./verify.js";
 import { SEED } from "./_seed.js";
 
@@ -83,6 +84,8 @@ export async function feedView() {
       score_basis: hh.basis,
       score_parts: hh.parts,
       excluded: hh.excluded,
+      // Exact-title headline and the posting's keywords against his resume.
+      ats: atsMatch(j, check?.features || null),
       // The morning head-hunt's reading of the full posting, when it has run.
       deep: deep[j.id] || null,
       posted_at: posted,

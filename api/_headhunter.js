@@ -18,6 +18,7 @@
 // extractFeatures() runs in the daily check against the posting text and
 // stores only what it found; scoreRole() runs on every read of the feed.
 
+import { postingTerms } from "./_ats.js";
 import { CONSULTANCY, INDUSTRY_MISMATCH } from "./_fit.js";
 
 export const WEIGHTS = { skills: 40, seniority: 25, domain: 20, practical: 15 };
@@ -259,6 +260,8 @@ export function extractFeatures(text = "", meta = {}) {
     warsaw: WARSAW.test(body),
     languages_required: languagesRequired(body),
     core_mentions: (body.match(new RegExp(CORE_FUNCTION.source, "gi")) || []).length,
+    // The posting's searchable terms in its own spelling, for the ATS match.
+    ats_terms: postingTerms(body),
   };
 }
 

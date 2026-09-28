@@ -153,6 +153,7 @@
   .hh ul { margin: 6px 0 0; padding-left: 18px; }
   .hh li { margin: 2px 0; }
   .hh .basis { color: var(--dim); font-style: italic; }
+  .hh.ats summary::after { content: "Keywords \25BE"; }
   .deep { font-size: 12.5px; margin: 7px 0 0; padding: 7px 9px; border-radius: 7px; background: var(--surface-2); color: var(--ink); }
   .deep b { font-weight: 700; }
   .deep .gap { color: var(--muted); }
@@ -656,7 +657,7 @@
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
           '<div class="job-head"><div class="job-co">' + esc(j.company) + "</div>" + categorySelect(j) + "</div>" +
           '<p class="job-title">' + esc(j.title) + "</p>" +
-          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + deepLine(j) + breakdown(j) +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + deepLine(j) + breakdown(j) + atsBlock(j) +
           '<div class="job-foot">' +
             '<span class="tierpill" title="Head Hunter score">' + (sc === null ? "" : '<span class="mono">' + sc + "</span>/100 \u00b7 ") +
               esc(tier.label) + "</span>" + stateTag +
@@ -705,6 +706,29 @@
       ? '<li class="basis">Scored from the title only. The daily check reads the posting itself and rescores it.</li>'
       : "";
     return '<details class="hh"><summary>' + line + "</summary><ul>" + items.join("") + basis + "</ul></details>";
+  }
+
+  // What an ATS search would find: the exact title to put under his name, and
+  // the posting's own keywords against his resume. Recruiters search by exact
+  // strings, so the posting's spelling is the one shown.
+  function atsBlock(j) {
+    var a = j.ats;
+    if (!a || !a.headline) return "";
+    var head = '<li><b>Headline under your name:</b> \u201c' + esc(a.headline) + '\u201d, the exact title from the posting</li>';
+    if (a.pending || !a.total) {
+      return '<details class="hh ats"><summary><span class="part">ATS keywords <b class="mono">\u2013</b></span></summary><ul>' +
+        head + '<li class="basis">The posting\u2019s keywords are read at the next daily check.</li></ul></details>';
+    }
+    var lo = a.target ? a.target[0] : 25, hi = a.target ? a.target[1] : 35;
+    var aim = Math.min(lo, a.reachable);
+    var items = [head];
+    if (a.on_resume.length) items.push("<li><b>Already on your resume:</b> " + esc(a.on_resume.join(", ")) + "</li>");
+    if (a.can_add.length) items.push("<li><b>True for you, add in these exact words:</b> " + esc(a.can_add.join(", ")) + "</li>");
+    if (a.missing.length) items.push("<li><b>In the posting, not in your record:</b> " + esc(a.missing.join(", ")) + "</li>");
+    items.push('<li class="basis">A tailored resume should carry ' + lo + "\u2013" + hi + " of the posting\u2019s terms, woven into real bullets, never pasted in. " +
+      (a.reachable < lo ? "This posting has only " + a.reachable + " you can truthfully use, so aim for all " + aim + "." : "") + "</li>");
+    return '<details class="hh ats"><summary><span class="part">ATS keywords <b class="mono">' + a.on_resume.length + "</b>/" + a.total +
+      ' on resume</span><span class="part">+<b class="mono">' + a.can_add.length + "</b> you can add</span></summary><ul>" + items.join("") + "</ul></details>";
   }
 
   function labelOf(list, key) {
