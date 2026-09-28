@@ -54,6 +54,32 @@ async function get(url, { json = false, method = "GET", body } = {}) {
 }
 
 const open = (method, extra = {}) => ({ state: "open", method, ...extra });
+
+// Posting text for the Head Hunter score (api/_headhunter.js). Capped: the
+// score needs the requirements, not a whole careers page.
+const MAX_TEXT = 20_000;
+const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function decode(s) {
+  return String(s)
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, e) => ENTITIES[e]);
+}
+// Greenhouse sends its HTML entity-escaped, so decode, strip, then decode what
+// the tags were hiding.
+export function plainText(html) {
+  if (!html) return "";
+  return decode(decode(String(html))
+    .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<\/?(p|div|li|ul|ol|br|h\d|tr|section)\b[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, " "))
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim()
+    .slice(0, MAX_TEXT);
+}
+const MODES = { remote: "remote", hybrid: "hybrid", onsite: "onsite", "on-site": "onsite", "on site": "onsite" };
+const modeOf = (v) => MODES[String(v || "").toLowerCase()] || null;
 const closed = (method, reason, extra = {}) => ({ state: "closed", method, reason, ...extra });
 const unknown = (method, reason) => ({ state: "unknown", method, reason });
 
@@ -70,17 +96,27 @@ function byStatus(r, method, closedReason) {
 async function greenhouse(u) {
   const m = u.pathname.match(/^\/([^/]+)\/jobs\/(\d+)/);
   if (!m) return null;
-  const r = await get(`https://boards-api.greenhouse.io/v1/boards/${m[1]}/jobs/${m[2]}`, { json: true });
+  const r = await get(`https://boards-api.greenhouse.io/v1/boards/${m[1]}/jobs/${m[2]}?pay_transparency=true`, { json: true });
   return byStatus(r, "greenhouse-api", "Greenhouse no longer has this posting")
-    ?? open("greenhouse-api", { posted_at: r.data?.first_published || null });
+    ?? open("greenhouse-api", {
+      posted_at: r.data?.first_published || null,
+      text: plainText(r.data?.content),
+      meta: { salary: Array.isArray(r.data?.pay_input_ranges) && r.data.pay_input_ranges.length > 0 },
+    });
 }
 
 async function lever(u, eu) {
   const m = u.pathname.match(/^\/([^/]+)\/([0-9a-f-]{36})/i);
   if (!m) return null;
   const r = await get(`https://api.${eu ? "eu." : ""}lever.co/v0/postings/${m[1]}/${m[2]}`, { json: true });
+  const d = r.data || {};
   return byStatus(r, "lever-api", "Lever no longer has this posting")
-    ?? open("lever-api", { posted_at: r.data?.createdAt ? new Date(r.data.createdAt).toISOString() : null });
+    ?? open("lever-api", {
+      posted_at: d.createdAt ? new Date(d.createdAt).toISOString() : null,
+      text: [d.descriptionPlain, ...(d.lists || []).map((l) => `${l.text}\n${plainText(l.content)}`), d.additionalPlain]
+        .filter(Boolean).join("\n").slice(0, MAX_TEXT),
+      meta: { salary: !!(d.salaryRange && (d.salaryRange.min || d.salaryRange.max)), mode: modeOf(d.workplaceType) },
+    });
 }
 
 async function smartrecruiters(u) {
@@ -90,17 +126,30 @@ async function smartrecruiters(u) {
   const verdict = byStatus(r, "smartrecruiters-api", "SmartRecruiters no longer has this posting");
   if (verdict) return verdict;
   if (r.data?.active === false) return closed("smartrecruiters-api", "SmartRecruiters marks this posting inactive");
-  return open("smartrecruiters-api", { posted_at: r.data?.releasedDate || null });
+  const sections = r.data?.jobAd?.sections || {};
+  const loc = r.data?.location || {};
+  return open("smartrecruiters-api", {
+    posted_at: r.data?.releasedDate || null,
+    text: plainText(Object.values(sections).map((x) => `${x?.title || ""}\n${x?.text || ""}`).join("\n")),
+    meta: { mode: loc.remote ? "remote" : loc.hybrid ? "hybrid" : null },
+  });
 }
 
 async function ashby(u) {
   const m = u.pathname.match(/^\/([^/]+)\/([0-9a-f-]{36})/i);
   if (!m) return null;
-  const r = await get(`https://api.ashbyhq.com/posting-api/job-board/${m[1]}`, { json: true });
+  const r = await get(`https://api.ashbyhq.com/posting-api/job-board/${m[1]}?includeCompensation=true`, { json: true });
   if (!r.ok || !Array.isArray(r.data?.jobs)) return unknown("ashby-api", r.status ? `HTTP ${r.status}` : r.error);
   const job = r.data.jobs.find((j) => String(j.id) === m[2] || String(j.jobUrl || "").includes(m[2]));
   return job
-    ? open("ashby-api", { posted_at: job.publishedAt || null })
+    ? open("ashby-api", {
+      posted_at: job.publishedAt || null,
+      text: (job.descriptionPlain || plainText(job.descriptionHtml)).slice(0, MAX_TEXT),
+      meta: {
+        salary: !!(job.compensation?.compensationTierSummary || job.compensation?.summaryComponents?.length),
+        mode: modeOf(job.workplaceType) || (job.isRemote ? "remote" : null),
+      },
+    })
     : closed("ashby-api", "no longer on the employer's Ashby board");
 }
 
@@ -127,7 +176,11 @@ async function workday(u) {
   if (info.endDate && Date.parse(info.endDate) < Date.now()) {
     return closed("workday-api", `posting ended ${info.endDate.slice(0, 10)}`);
   }
-  return open("workday-api", { posted_at: info.startDate || null });
+  return open("workday-api", {
+    posted_at: info.startDate || null,
+    text: plainText(info.jobDescription),
+    meta: { mode: modeOf(info.remoteType) },
+  });
 }
 
 // --- the page itself -------------------------------------------------------------
@@ -211,7 +264,17 @@ async function page(url) {
   const notice = closureNotice(r.data);
   if (notice) return closed("page", `page says "${notice.slice(0, 80)}"`, { posted_at: posted });
 
-  return open("page", { posted_at: posted });
+  // The structured description when the page publishes one; the page text
+  // otherwise, which carries navigation noise but also the requirements.
+  const ld = postings.find((p) => p.description);
+  return open("page", {
+    posted_at: posted,
+    text: ld ? plainText(ld.description) : visibleText(r.data).slice(0, MAX_TEXT),
+    meta: {
+      salary: postings.some((p) => p.baseSalary),
+      mode: postings.some((p) => /telecommute/i.test(String(p.jobLocationType || ""))) ? "remote" : null,
+    },
+  });
 }
 
 // --- entry point ----------------------------------------------------------------

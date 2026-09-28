@@ -15,6 +15,7 @@
 
 import { readBlob, readFeed, writeBlob } from "./_lib.js";
 import { verifyAll } from "./_verify.js";
+import { extractFeatures } from "./_headhunter.js";
 import { keyMatches } from "./overrides.js";
 
 export const VERIFY_PATH = "pipeline/verify.json";
@@ -84,6 +85,10 @@ export default async function handler(req, res) {
       checked_at: startedAt,
       // Keep the last good posting date if this check did not find one.
       posted_at: v.posted_at || prev.posted_at || null,
+      // What the Head Hunter score reads from the posting (api/_headhunter.js).
+      // Only the findings are stored, not the text, so the feed stays small;
+      // the weights apply on read. Kept from the last check that saw the text.
+      features: v.text ? extractFeatures(v.text, v.meta || {}) : prev.features || null,
     };
     if (v.state === "closed") {
       entry.closed_at = startedAt;

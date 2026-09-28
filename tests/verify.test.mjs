@@ -26,8 +26,8 @@ const OPEN_PAGE = "<html><body><h1>Business Analyst</h1><p>Apply now. Applicatio
 
 // --- platform APIs ------------------------------------------------------------
 routes = {
-  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/111": json(200, { id: 111, first_published: "2026-08-01T00:00:00Z" }),
-  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/404": json(404, {}),
+  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/111?pay_transparency=true": json(200, { id: 111, first_published: "2026-08-01T00:00:00Z" }),
+  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/404?pay_transparency=true": json(404, {}),
   "https://job-boards.greenhouse.io/capco/jobs/404": html(200, "<html>board</html>", "https://job-boards.greenhouse.io/capco?error=true"),
 };
 let v = await verifyPosting("https://job-boards.greenhouse.io/capco/jobs/111");
@@ -93,7 +93,7 @@ check("503 -> unknown, not closed", v.state === "unknown", JSON.stringify(v));
 v = await pageCase("TIMEOUT");
 check("timeout -> unknown, not closed", v.state === "unknown", JSON.stringify(v));
 routes = {
-  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/500": json(500, {}),
+  "https://boards-api.greenhouse.io/v1/boards/capco/jobs/500?pay_transparency=true": json(500, {}),
   "https://job-boards.greenhouse.io/capco/jobs/500": html(200, OPEN_PAGE, "https://job-boards.greenhouse.io/capco/jobs/500"),
 };
 v = await verifyPosting("https://job-boards.greenhouse.io/capco/jobs/500");
@@ -130,8 +130,8 @@ globalThis.fetch = async (url, opts = {}) => {
   }
   calls.push(url);
   const r = {
-    "https://boards-api.greenhouse.io/v1/boards/capco/jobs/111": json(200, { first_published: days(3) }),
-    "https://boards-api.greenhouse.io/v1/boards/capco/jobs/404": json(404, {}),
+    "https://boards-api.greenhouse.io/v1/boards/capco/jobs/111?pay_transparency=true": json(200, { first_published: days(3) }),
+    "https://boards-api.greenhouse.io/v1/boards/capco/jobs/404?pay_transparency=true": json(404, {}),
     "https://accenture.wd103.myworkdayjobs.com/wday/cxs/accenture/AccentureCareers/job/Warsaw/Strategy-Analyst_R001": json(200, { jobPostingInfo: { startDate: days(45).slice(0, 10) } }),
     [P]: html(503, "down", P),
   }[url];

@@ -137,6 +137,24 @@ unknown, never as closed. Closed roles leave the shortlist but stay under
 not removed. Results live in `pipeline/verify.json`, and `/api/status` reports
 the latest run.
 
+Every role carries a **Head Hunter score out of 100** (`api/_headhunter.js`),
+which replaces the old fit tiers on the page:
+
+| Part | Points | What it measures |
+| --- | --- | --- |
+| Skills overlap | 40 | Share of the skills the posting asks for that he has used in a paid role |
+| Seniority fit | 25 | Years and level asked for against his four years, stricter of the two |
+| Domain fit | 20 | Industry (financial services scores highest) and function |
+| Practical fit | 15 | Warsaw or remote-in-Poland, work mode stated, salary stated |
+
+Two rules: a skill only listed on the CV or learned on a course scores zero, and
+anything the posting hides (salary, seniority, work mode) scores low rather than
+being guessed. The daily check stores what it finds in each posting
+(`features` in `pipeline/verify.json`), and the weights are applied when the
+feed is read, so a rule change needs no re-crawl. Until a role's first check,
+it is scored from its title alone and labelled as such. Bands: 70+ strong, 55–69
+good, 40–54 stretch, under 40 long shot.
+
 Node tests for the dashboard API: `cd tests && for t in *.test.mjs; do node $t; done`.
 
 ## Testing

@@ -5,6 +5,7 @@
 
 import { readFeed } from "./_lib.js";
 import { categorize } from "./_category.js";
+import { scoreRole } from "./_headhunter.js";
 import { readVerify } from "./verify.js";
 import { SEED } from "./_seed.js";
 
@@ -64,8 +65,15 @@ export default async function handler(req, res) {
       : j.live === false
         ? { reason: refreshReason(j), since: j.checked_at || j.last_seen || null, by: "refresh" }
         : null;
+    // Head Hunter score out of 100. Scored from the posting text the daily
+    // check stored, or from the title alone until the first check has run.
+    const hh = scoreRole(j, check?.features || null);
     return {
       ...j,
+      score: hh.total,
+      band: hh.band,
+      score_basis: hh.basis,
+      score_parts: hh.parts,
       posted_at: posted,
       age_days: Number.isFinite(days) ? days : null,
       age_bucket: bucketOf(Number.isFinite(days) ? days : null),
@@ -83,9 +91,11 @@ export default async function handler(req, res) {
     };
   });
 
-  // Best fit first, then freshest. Dead and gated-out roles sink rather than
+  // Best Head Hunter score first, then the title-based fit score as a
+  // tie-break, then freshest. Dead and gated-out roles sink rather than
   // disappearing — the history is deliberate, but it should not lead.
   const byMerit = (a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
     if ((b.fit_score ?? 0) !== (a.fit_score ?? 0)) return (b.fit_score ?? 0) - (a.fit_score ?? 0);
     return (a.age_days ?? 9999) - (b.age_days ?? 9999);
   };
@@ -134,6 +144,7 @@ export default async function handler(req, res) {
       ? { at: verify.last_run.finished_at, checked: verify.last_run.checked, newly_closed: verify.last_run.newly_closed.length }
       : null,
     capped_count: jobs.filter((j) => j.capped).length,
+    scored_from_posting: jobs.filter((j) => j.score_basis === "posting").length,
     max_per_company: MAX_PER_COMPANY,
     by_company: Object.fromEntries(
       [...perCompany.entries()].sort((a, b) => b[1] - a[1])

@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
   /* Blue, light-shaded theme. Two colour codes carry meaning and nothing else
-     uses them: fit tier (blues, strongest to weakest) on the card's left edge
-     and pill, and status (amber flagged, green applied, slate dismissed) on
+     uses them: Head Hunter score band (blues, strongest to weakest) on the
+     card's left edge and score pill, and status (amber flagged, green applied, slate dismissed) on
      the tag, the pressed button and the filter chip. Every text/background
      pair here is at least 4.5:1. */
   :root {
@@ -25,10 +25,11 @@
     --dim: #62779a;
     --err: #b3261e;
 
-    /* Fit */
-    --t1: #1746b8;  --t1-bg: #e3ebfc;   /* Direct match: deep blue */
-    --t2: #0b6b78;  --t2-bg: #dbf2f3;   /* Strong fit: teal */
-    --t3: #56657e;  --t3-bg: #edf0f5;   /* Adjacent: slate */
+    /* Fit: Head Hunter score bands */
+    --t1: #1746b8;  --t1-bg: #e3ebfc;   /* Strong match 70+: deep blue */
+    --t2: #0b6b78;  --t2-bg: #dbf2f3;   /* Good match 55-69: teal */
+    --t3: #56657e;  --t3-bg: #edf0f5;   /* Stretch 40-54: slate */
+    --t4: #6b4f96;  --t4-bg: #f0ebf8;   /* Long shot under 40: muted violet */
 
     /* Status */
     --open: #1d5fcc;
@@ -57,6 +58,7 @@
       --t1: #8db4ff;  --t1-bg: #172a4f;
       --t2: #5fd6d2;  --t2-bg: #0d2e33;
       --t3: #aab6ca;  --t3-bg: #1f2939;
+      --t4: #c3aef0;  --t4-bg: #261f38;
 
       --open: #78aaff;
       --flag: #f4bb55;       --flag-bg: #372709;       --flag-line: #6b4c14;
@@ -142,6 +144,15 @@
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
     color: var(--tier); background: var(--tier-bg); border-radius: 4px; padding: 3px 7px;
   }
+  .hh { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
+  .hh summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+  .hh summary::-webkit-details-marker { display: none; }
+  .hh summary::after { content: "Why \25BE"; font-weight: 700; color: var(--accent); }
+  .hh[open] summary::after { content: "Hide \25B4"; }
+  .hh .part b { color: var(--ink); font-weight: 700; }
+  .hh ul { margin: 6px 0 0; padding-left: 18px; }
+  .hh li { margin: 2px 0; }
+  .hh .basis { color: var(--dim); font-style: italic; }
   .state {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
@@ -268,7 +279,8 @@
   var OVERRIDES = API + "/overrides";
   var FLAG_KEY = "pipeline.flags.v1";
   var FILTER_KEY = "pipeline.filter.v1";
-  var FIT_KEY = "pipeline.fit.v1";
+  // v2: the Fit filter moved from tiers to Head Hunter score bands.
+  var FIT_KEY = "pipeline.fit.v2";
   var CAT_KEY = "pipeline.cat.v1";
   var POSTED_KEY = "pipeline.posted.v1";
   // Category overrides: the last copy the server confirmed, the edits it has
@@ -277,12 +289,44 @@
   var CAT_PENDING_KEY = "pipeline.categories.pending.v1";
   var EDIT_KEY = "pipeline.editkey.v1";
   var EMBEDDED = {"updated_at":"2026-09-17T15:20:00Z","count":19,"jobs":[{"id":"accenture-74ec6229","title":"Strategy Consultant — Operating Model & Organizational Design","company":"Accenture","url":"https://www.accenture.com/be-en/careers/jobdetails?id=R00291171_en","tier":1,"why":"Designing enterprise operating models and advising on reorganisations — your FAB coverage-model redesign (1,500+ groups, 10 teams) and Al-Ghurair TOM. Asks 2+ yrs strategy consulting.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"accenture-0d4f8d5b","title":"S&C Poland — Strategy Analyst, Warsaw","company":"Accenture","url":"https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Warsaw/S-C-GN-Poland---Strategy---Analyst_R00285728-1/apply","tier":1,"why":"Warsaw-based opening in Accenture's Strategy practice.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"mastercard-683b568e","title":"Consultant, Advisors & Consulting Services — Strategy & Transformation","company":"Mastercard","url":"https://careers.mastercard.com/us/en/job/R-265030/Consultant-Advisors-Consulting-Services-Strategy-Transformation","tier":1,"why":"Management consulting inside a payments company. You rebuilt ACH processing settling ~$200mn weekly and spent a year in wholesale banking.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"deloitte-53238f2c","title":"Consultant — CFO Advisory, Finance Strategy & Operations, Warsaw","company":"Deloitte","url":"https://jobs.accaglobal.com/job/14139992/consultant-cfo-advisory-finance-strategy-and-operations-warsaw/","tier":1,"why":"Your old practice and your old work, different city. Alumni status is a real advantage here.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"pwc-56b7d01c","title":"(Senior) Consultant — Finance Transformation, Warsaw","company":"PwC","url":"https://workopia.io/jobs/7200efc29418a2d5f73d640967448450","tier":1,"why":"End-to-end finance operating model redesign and ERP-driven transformation: your Deloitte Workday work plus the Al-Ghurair TOM, verbatim.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"ey-2e51af70","title":"Business Transformation Consultant, Warsaw","company":"EY","url":"https://careers.ey.com/ey/job/Warszawa-Business-Transformation-Consultant-MZ-01-208/697111101/","tier":1,"why":"Straight business transformation consulting, Warsaw-based.","status":"new","found_at":"2026-09-17","category":"transformation"},{"id":"capco-444dbc9e","title":"Business Analyst — Product Control","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8146866","tier":2,"why":"Finance transformation across Global Markets at a consultancy that does only financial services.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"capco-14f10e97","title":"Senior Business Analyst","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7383078","tier":2,"why":"Senior BA in Capco's Warsaw business consulting team.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-83bd1ad1","title":"Senior Business Analyst — Cards","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8081357","tier":2,"why":"Large-scale cards transformation for banking clients.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-9a4df712","title":"Business Analyst — Payments","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/5236287","tier":2,"why":"Payments transformation — closest match to your Deloitte ACH/NACHA rebuild.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-4ab243a3","title":"Business Analyst — BCIM/TPM","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7962951","tier":2,"why":"Transformation and governance initiatives across business and technology.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"bcg-b287111f","title":"Associate or Consultant, Warsaw","company":"BCG","url":"https://jobs.managementconsulted.com/jobs/499260478-associate-or-consultant-warsaw","tier":2,"why":"MBB generalist consulting in Warsaw. IESE MiM plus 4 yrs is a credible Consultant-track profile.","status":"new","found_at":"2026-09-17","category":"other"},{"id":"pwc-strategy-964bc868","title":"Team Member — Strategy&, Warsaw","company":"PwC Strategy&","url":"https://jobs-cee.pwc.com/ce/en/job/528973WD/Team-Member-Strategy","tier":2,"why":"PwC's strategy arm in Warsaw.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"accenture-6e9f6c9d","title":"M&A Strategy Analyst / Consultant — Accenture Strategy","company":"Accenture","url":"https://en.wizbii.com/company/accenture/job/analyst-accenture-strategy-practice-m-a","tier":2,"why":"Transaction advisory. Your Kazakhstan market-entry case — sizing the FCY gap, modelling three entry structures — is exactly this shape.","status":"new","found_at":"2026-09-17","category":"deals"},{"id":"ey-440cb83d","title":"Technology Strategy & Transformation Consultant","company":"EY","url":"https://workopia.io/jobs/9edf367d6c532fcaaf7df11f2e826298","tier":2,"why":"Digital transformation for financial and insurance clients.","status":"new","found_at":"2026-09-17","category":"tech"},{"id":"accenture-683cffaa","title":"Business Strategy Consultant — ICH Europe","company":"Accenture","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Business_Strategy_Consultant_Life_SciencesHealthcare_ICH_Europe.id21304756","tier":2,"why":"Growth strategy, market entry, corporate strategy, operating model, M&A. Capabilities match; industry (life sciences) does not.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"xebia-bd137a8b","title":"Poland & CEE job board","company":"Xebia","url":"https://job-boards.greenhouse.io/xebiacee","tier":3,"why":"Intelligent automation and digital transformation — your Kagool year. This is the whole board, not one posting.","status":"new","found_at":"2026-09-17","category":"other"},{"id":"efinancialcareers-bdda0526","title":"Lead Operational Excellence Specialist, Warsaw","company":"eFinancialCareers","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Lead_Operational_Excellence_Specialist.id24201705","tier":3,"why":"Operational excellence with your Lean Six Sigma and Treasury process redesign behind it.","status":"new","found_at":"2026-09-17","category":"transformation"},{"id":"vml-enterprise-solutions-c729b96c","title":"Senior Project Manager — Poland","company":"VML Enterprise Solutions","url":"https://job-boards.greenhouse.io/vmlenterprisesolutions/jobs/8328979002","tier":3,"why":"Agile delivery and operational improvement. PMO-adjacent rather than strategy.","status":"new","found_at":"2026-09-17","category":"pmo"}]};
-  var TIERS = {
-    1: { label: "Direct match", color: "var(--t1)", bg: "var(--t1-bg)" },
-    2: { label: "Strong fit",   color: "var(--t2)", bg: "var(--t2-bg)" },
-    3: { label: "Adjacent",     color: "var(--t3)", bg: "var(--t3-bg)" }
+  // Head Hunter score bands. Must match BANDS in api/_headhunter.js;
+  // tests/headhunter.test.mjs checks that it does.
+  var BANDS = [
+    { key: "strong", min: 70, label: "Strong match" },
+    { key: "good", min: 55, label: "Good match" },
+    { key: "stretch", min: 40, label: "Stretch" },
+    { key: "long", min: 0, label: "Long shot" }
+  ];
+  var BAND_STYLE = {
+    strong:  { color: "var(--t1)", bg: "var(--t1-bg)" },
+    good:    { color: "var(--t2)", bg: "var(--t2-bg)" },
+    stretch: { color: "var(--t3)", bg: "var(--t3-bg)" },
+    long:    { color: "var(--t4)", bg: "var(--t4-bg)" }
   };
-  var UNRANKED = { label: "Unranked", color: "var(--line)", bg: "var(--surface-2)" };
+  var UNRANKED = { label: "Not scored", color: "var(--line)", bg: "var(--surface-2)" };
+  var PARTS = [
+    { key: "skills", label: "Skills" },
+    { key: "seniority", label: "Seniority" },
+    { key: "domain", label: "Domain" },
+    { key: "practical", label: "Practical" }
+  ];
+  function scoreOf(job) { return typeof job.score === "number" ? job.score : null; }
+  // The copy built into the page predates the score, so a role can be unscored.
+  function bandOf(job) {
+    var sc = scoreOf(job);
+    if (sc === null) return "unscored";
+    for (var i = 0; i < BANDS.length; i++) if (sc >= BANDS[i].min) return BANDS[i].key;
+    return "long";
+  }
+  function bandInfo(key) {
+    for (var i = 0; i < BANDS.length; i++) if (BANDS[i].key === key) {
+      return { label: BANDS[i].label, color: BAND_STYLE[key].color, bg: BAND_STYLE[key].bg };
+    }
+    return UNRANKED;
+  }
+  function bandRange(i) {
+    return i === 0 ? BANDS[0].min + "+" : BANDS[i].min + "\u2013" + (BANDS[i - 1].min - 1);
+  }
   var FILTERS = [
     { key: "open",      label: "Open",      color: "var(--open)" },
     { key: "flagged",   label: "Flagged",   color: "var(--flag)" },
@@ -429,7 +473,7 @@
       else if (filter === "closed") { if (!isClosed(job)) return false; }
       else if (st !== filter) return false;
     }
-    if (skip !== "fit" && fitFilter !== "all" && String(job.tier) !== fitFilter) return false;
+    if (skip !== "fit" && fitFilter !== "all" && bandOf(job) !== fitFilter) return false;
     if (skip !== "cat" && catFilter !== "all" && categoryOf(job) !== catFilter) return false;
     if (skip !== "posted" && !postedMatches(job, postedFilter)) return false;
     return true;
@@ -471,7 +515,7 @@
 
   function renderFilters() {
     var sc = statusCounts();
-    var fc = tally("fit", function (j) { return String(j.tier); });
+    var fc = tally("fit", bandOf);
     var cc = tally("cat", categoryOf);
     var pc = {};
     POSTED.forEach(function (p) {
@@ -480,9 +524,10 @@
 
     filtersEl.innerHTML =
       select("status", "Status", filter, FILTERS.map(function (f) { return { key: f.key, label: f.label, n: sc[f.key] || 0 }; }), filter === "open") +
-      select("fit", "Fit", fitFilter, [{ key: "all", label: "All fits", n: fc.all }].concat([1, 2, 3].map(function (t) {
-        return { key: String(t), label: TIERS[t].label, n: fc[t] || 0 };
-      })), fitFilter === "all") +
+      select("fit", "Fit score", fitFilter, [{ key: "all", label: "All scores", n: fc.all }].concat(BANDS.map(function (b, i) {
+        return { key: b.key, label: b.label + " (" + bandRange(i) + ")", n: fc[b.key] || 0 };
+      })).concat(fc.unscored || fitFilter === "unscored" ? [{ key: "unscored", label: UNRANKED.label, n: fc.unscored || 0 }] : []),
+      fitFilter === "all") +
       // Only types with roles under the other filters, plus the selected one.
       select("cat", "Type", catFilter, [{ key: "all", label: "All types", n: cc.all }].concat(
         CATEGORIES.filter(function (c) { return cc[c.key] || catFilter === c.key; }).map(function (c) {
@@ -498,8 +543,8 @@
   }
 
   function legend() {
-    var fit = [1, 2, 3].map(function (t) {
-      return '<span><i class="swatch" style="--c: ' + TIERS[t].color + '"></i>' + esc(TIERS[t].label) + "</span>";
+    var fit = BANDS.map(function (b, i) {
+      return '<span><i class="swatch" style="--c: ' + BAND_STYLE[b.key].color + '"></i>' + esc(b.label) + " " + bandRange(i) + "</span>";
     }).join("");
     var status = ["flagged", "applied", "dismissed"].map(function (k) {
       return '<span><i class="swatch round" style="--c: var(--' + (k === "flagged" ? "flag" : k) + ')"></i>' +
@@ -507,7 +552,7 @@
     }).join("");
     status += '<span><i class="swatch round" style="--c: var(--closed)"></i>Closed</span>' +
       '<span><i class="swatch dash" style="--c: var(--old)"></i>Posted ' + OLD_DAYS + "+ days ago</span>";
-    return '<details class="key"><summary>Colour key</summary><div class="legend"><b>Fit</b>' + fit + "<b>Status</b>" + status +
+    return '<details class="key"><summary>Colour key</summary><div class="legend"><b>Fit /100</b>' + fit + "<b>Status</b>" + status +
       '<b>Type</b><span><i class="swatch mine"></i>changed by you</span>' +
       '<span><i class="newtag">New</i>found in the last ' + NEW_DAYS + " days</span></div></details>";
   }
@@ -532,7 +577,7 @@
     var shown = jobs.filter(function (j) { return passes(j); });
     if (!shown.length) {
       var parts = [labelOf(FILTERS, filter)];
-      if (fitFilter !== "all") parts.push(TIERS[fitFilter] ? TIERS[fitFilter].label : fitFilter);
+      if (fitFilter !== "all") parts.push(bandInfo(fitFilter).label);
       if (catFilter !== "all") parts.push(CAT_LABEL[catFilter] || catFilter);
       if (postedFilter !== "any") parts.push(labelOf(POSTED, postedFilter));
       listEl.innerHTML = legend() + '<p class="note">Nothing under <b>' + esc(parts.join(" · ")) +
@@ -541,18 +586,20 @@
     }
     // Closed roles sink below open ones wherever both are shown.
     shown.sort(function (a, b) {
-      // Within a fit tier, newest first: a fresh posting is worth more
-      // attention than an old one at the same fit.
+      // Highest score first; at the same score, newest first, because a
+      // fresh posting is worth more attention than an old one.
       var aa = ageOf(a), ab = ageOf(b);
+      var sa = scoreOf(a), sb = scoreOf(b);
       return (isClosed(a) - isClosed(b)) ||
-        (a.tier || 9) - (b.tier || 9) ||
+        ((sb === null ? -1 : sb) - (sa === null ? -1 : sa)) ||
         ((aa ? aa.days : 9999) - (ab ? ab.days : 9999)) ||
         String(a.company).localeCompare(String(b.company));
     });
 
     listEl.innerHTML = legend() + shown.map(function (j) {
       var st = statusOf(j);
-      var tier = TIERS[j.tier] || UNRANKED;
+      var tier = bandInfo(bandOf(j));
+      var sc = scoreOf(j);
       var stateTag = STATE_LABEL[st] ? '<span class="state ' + st + '">' + STATE_LABEL[st] + "</span>" : "";
       var dead = isClosed(j);
       if (dead) stateTag += '<span class="state closed">Closed</span>';
@@ -570,9 +617,10 @@
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
           '<div class="job-head"><div class="job-co">' + esc(j.company) + "</div>" + categorySelect(j) + "</div>" +
           '<p class="job-title">' + esc(j.title) + "</p>" +
-          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + breakdown(j) +
           '<div class="job-foot">' +
-            '<span class="tierpill">' + esc(tier.label) + "</span>" + stateTag +
+            '<span class="tierpill" title="Head Hunter score">' + (sc === null ? "" : '<span class="mono">' + sc + "</span>/100 \u00b7 ") +
+              esc(tier.label) + "</span>" + stateTag +
             ageTag +
             '<span class="spacer"></span>' +
             '<a class="open" href="' + esc(j.url) + '" target="_blank" rel="noopener">Open &rarr;</a>' +
@@ -587,6 +635,28 @@
           "</div>" +
         "</article>";
     }).join("");
+  }
+
+  // The four parts on one line; the reasons behind them one tap away.
+  function breakdown(j) {
+    var p = j.score_parts;
+    if (!p) return "";
+    var line = PARTS.map(function (x) {
+      var part = p[x.key] || {};
+      return '<span class="part">' + x.label + ' <b class="mono">' + (part.score == null ? "\u2013" : part.score) + "</b>/" + (part.max || "") + "</span>";
+    }).join("");
+    var items = [];
+    var sk = p.skills || {};
+    if (sk.matched && sk.matched.length) items.push("<li><b>Proven in a paid role:</b> " + esc(sk.matched.join(", ")) + "</li>");
+    if (sk.listed_only && sk.listed_only.length) items.push("<li><b>Only listed or from a course, scores 0:</b> " + esc(sk.listed_only.join(", ")) + "</li>");
+    if (sk.missing && sk.missing.length) items.push("<li><b>Asked for, not in your record:</b> " + esc(sk.missing.join(", ")) + "</li>");
+    ["seniority", "domain", "practical"].forEach(function (k) {
+      if (p[k] && p[k].note) items.push("<li><b>" + k.charAt(0).toUpperCase() + k.slice(1) + ":</b> " + esc(p[k].note) + "</li>");
+    });
+    var basis = j.score_basis === "title only"
+      ? '<li class="basis">Scored from the title only. The daily check reads the posting itself and rescores it.</li>'
+      : "";
+    return '<details class="hh"><summary>' + line + "</summary><ul>" + items.join("") + basis + "</ul></details>";
   }
 
   function labelOf(list, key) {

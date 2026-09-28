@@ -141,17 +141,17 @@ const TITLE_SIGNALS = [
 
 // Firms where consulting IS the product, so his consulting record is read as
 // directly relevant rather than as adjacent industry experience.
-const CONSULTANCY = /\b(capco|deloitte|pwc|strategy&|ey|ernst|kpmg|accenture|bcg|boston consulting|bain|mckinsey|oliver wyman|alvarez|roland berger|kearney|zs associates|simon-kucher)\b/i;
+export const CONSULTANCY = /\b(capco|deloitte|pwc|strategy&|ey|ernst|kpmg|accenture|bcg|boston consulting|bain|mckinsey|oliver wyman|alvarez|roland berger|kearney|zs associates|simon-kucher)\b/i;
 
 // Financial services is where he screens best: four years of banking and
 // insurance-adjacent delivery is a differentiator there and irrelevant
 // elsewhere.
-const FS_EMPLOYER = /\b(capco|bank|banking|citi|goldman|ubs|ing|nordea|santander|mastercard|visa|revolut|wise|klarna|n26|adyen|sumup|deloitte|pwc|ey|kpmg|accenture|bcg|bain|mckinsey|strategy&|oliver wyman|alvarez)\b/i;
-const FS_ROLE = /\b(bank|banking|financial services|payments|capital markets|treasury|wholesale|insurance|fintech|cards)\b/i;
+export const FS_EMPLOYER = /\b(capco|bank|banking|citi|goldman|ubs|ing|nordea|santander|mastercard|visa|revolut|wise|klarna|n26|adyen|sumup|deloitte|pwc|ey|kpmg|accenture|bcg|bain|mckinsey|strategy&|oliver wyman|alvarez)\b/i;
+export const FS_ROLE = /\b(bank|banking|financial services|payments|capital markets|treasury|wholesale|insurance|fintech|cards)\b/i;
 
 // Industries where his four years read as irrelevant to a screener, however
 // well the verbs match.
-const INDUSTRY_MISMATCH = [
+export const INDUSTRY_MISMATCH = [
   // Stems end in \w* and nouns take an optional plural. Each pattern is closed
   // by \b, so a bare stem can never match a longer word: "life science" missed
   // "Life Sciences", "pharma" missed "pharmaceutical", and "manufactur" and
