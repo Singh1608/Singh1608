@@ -3,7 +3,7 @@
 // Kept separate from refresh.js so the page never depends on a sweep running,
 // and so a failing board can never make the page go blank.
 
-import { readFeed } from "./_lib.js";
+import { readBlob, readFeed } from "./_lib.js";
 import { categorize } from "./_category.js";
 import { scoreRole } from "./_headhunter.js";
 import { readVerify } from "./verify.js";
@@ -36,9 +36,17 @@ const MAX_PER_COMPANY = 5;
 
 const BUCKET_ORDER = ["this week", "this month", "1-3 months", "over 3 months", "unknown"];
 
-export default async function handler(req, res) {
-  const [feed, verify] = await Promise.all([readFeed(), readVerify()]);
+// Deep Head Hunter results, written by the 7:00 Dubai run through
+// api/headhunt.js. Kept apart from the feed for the same reason as the
+// daily check's results: one writer per Blob object.
+export const HEADHUNT_PATH = "pipeline/headhunt.json";
+
+// The feed as the page sees it: every role scored, capped and sorted. Shared
+// with api/headhunt.js so the morning run ranks roles exactly as the page does.
+export async function feedView() {
+  const [feed, verify, deepStore] = await Promise.all([readFeed(), readVerify(), readBlob(HEADHUNT_PATH)]);
   const checks = verify?.results || {};
+  const deep = deepStore?.results || {};
 
   // Before the first successful sweep there is no Blob object yet. Serving the
   // seed keeps the page populated rather than showing an empty list that looks
@@ -74,6 +82,8 @@ export default async function handler(req, res) {
       band: hh.band,
       score_basis: hh.basis,
       score_parts: hh.parts,
+      // The morning head-hunt's reading of the full posting, when it has run.
+      deep: deep[j.id] || null,
       posted_at: posted,
       age_days: Number.isFinite(days) ? days : null,
       age_bucket: bucketOf(Number.isFinite(days) ? days : null),
@@ -128,13 +138,7 @@ export default async function handler(req, res) {
   for (const b of BUCKET_ORDER) byBucket[b] = 0;
   for (const j of jobs) if (j.actionable) byBucket[j.age_bucket]++;
 
-  res.setHeader("cache-control", "public, s-maxage=60, stale-while-revalidate=600");
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  // Copies of the dashboard served from other origins fetch this same feed.
-  // The data is already public, so a wildcard costs nothing and keeps those
-  // copies from silently failing CORS.
-  res.setHeader("access-control-allow-origin", "*");
-  return res.status(200).json({
+  return {
     ...body,
     jobs,
     actionable_count: jobs.filter((j) => j.actionable).length,
@@ -150,5 +154,17 @@ export default async function handler(req, res) {
       [...perCompany.entries()].sort((a, b) => b[1] - a[1])
     ),
     by_age: byBucket,
-  });
+    last_headhunt: deepStore?.last_run || null,
+  };
+}
+
+export default async function handler(req, res) {
+  const view = await feedView();
+  res.setHeader("cache-control", "public, s-maxage=60, stale-while-revalidate=600");
+  res.setHeader("content-type", "application/json; charset=utf-8");
+  // Copies of the dashboard served from other origins fetch this same feed.
+  // The data is already public, so a wildcard costs nothing and keeps those
+  // copies from silently failing CORS.
+  res.setHeader("access-control-allow-origin", "*");
+  return res.status(200).json(view);
 }

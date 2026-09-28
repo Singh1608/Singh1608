@@ -128,7 +128,7 @@ title by `api/_category.js`. Changes made on the page are stored in
 `PIPELINE_EDIT_KEY` is set, changes are saved only on the device where they
 were made.
 
-`api/verify.js` runs daily at 17:00 UTC, an hour after the refresh. It checks
+The refresh runs at 00:00 UTC and `api/verify.js` at 01:00 UTC, an hour after it (Hobby crons fire somewhere inside their hour), so both finish before the 07:00 Dubai (03:00 UTC) head-hunt. It checks
 every shortlisted role through the platform's own API (Greenhouse, Lever,
 SmartRecruiters, Ashby, Workday) or by reading the page for a closure notice
 or an expired `validThrough` date. A 403, a 5xx or a timeout counts as
@@ -154,6 +154,12 @@ being guessed. The daily check stores what it finds in each posting
 feed is read, so a rule change needs no re-crawl. Until a role's first check,
 it is scored from its title alone and labelled as such. Bands: 70+ strong, 55–69
 good, 40–54 stretch, under 40 long shot.
+
+`api/headhunt.js` serves that morning run. `GET` returns the shortlist (every
+open role scoring 55+, plus named ids and employer posting URLs) with each
+posting's text and a `needs_scoring` flag. `POST` stores the deep scores in
+`pipeline/headhunt.json`, and the page shows them on each card. Both need
+`PIPELINE_EDIT_KEY`.
 
 Node tests for the dashboard API: `cd tests && for t in *.test.mjs; do node $t; done`.
 

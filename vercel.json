@@ -4,11 +4,11 @@
   "crons": [
     {
       "path": "/api/refresh",
-      "schedule": "0 16 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/verify",
-      "schedule": "0 17 * * *"
+      "schedule": "0 1 * * *"
     }
   ],
   "headers": [
@@ -27,6 +27,9 @@
       "maxDuration": 60
     },
     "api/verify.js": {
+      "maxDuration": 60
+    },
+    "api/headhunt.js": {
       "maxDuration": 60
     }
   }

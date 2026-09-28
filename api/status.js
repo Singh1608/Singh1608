@@ -52,12 +52,12 @@ export default async function handler(req, res) {
     },
     last_run: run ?? null,
     hours_since_last_run: runAge,
-    next_run: "daily at 16:00 UTC (18:00 Warsaw, 17:00 once Poland moves to CET)",
+    next_run: "daily between 00:00 and 00:59 UTC (04:00-04:59 Dubai), ready for the 07:00 Dubai head-hunt",
     // The dead-role check that follows the refresh. newly_closed lists the
     // roles it found closed on its last run; the daily email reads this.
     last_verify: verify?.last_run ?? null,
     hours_since_last_verify: hoursSince(verify?.last_run?.finished_at),
     verify_history: verify?.history ?? [],
-    next_verify: "daily at 17:00 UTC, an hour after the refresh",
+    next_verify: "daily between 01:00 and 01:59 UTC (05:00-05:59 Dubai), an hour after the refresh",
   });
 }

@@ -153,6 +153,9 @@
   .hh ul { margin: 6px 0 0; padding-left: 18px; }
   .hh li { margin: 2px 0; }
   .hh .basis { color: var(--dim); font-style: italic; }
+  .deep { font-size: 12.5px; margin: 7px 0 0; padding: 7px 9px; border-radius: 7px; background: var(--surface-2); color: var(--ink); }
+  .deep b { font-weight: 700; }
+  .deep .gap { color: var(--muted); }
   .state {
     display: inline-flex; align-items: center; gap: 5px;
     font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
@@ -247,7 +250,7 @@
 </main>
 
 <footer class="wrap">
-  Roles are refreshed once a day, after offices close in Poland, and stored in
+  Roles are refreshed once a day, overnight, and head-hunted at 07:00 Dubai time. They are stored in
   full: nothing is ever removed, so “All” stays the complete history. Flags are
   saved in this browser. Role types are set automatically from the title; a
   type you change is synced to your other devices once you enter your edit key.
@@ -617,7 +620,7 @@
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
           '<div class="job-head"><div class="job-co">' + esc(j.company) + "</div>" + categorySelect(j) + "</div>" +
           '<p class="job-title">' + esc(j.title) + "</p>" +
-          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + breakdown(j) +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + deepLine(j) + breakdown(j) +
           '<div class="job-foot">' +
             '<span class="tierpill" title="Head Hunter score">' + (sc === null ? "" : '<span class="mono">' + sc + "</span>/100 \u00b7 ") +
               esc(tier.label) + "</span>" + stateTag +
@@ -635,6 +638,15 @@
           "</div>" +
         "</article>";
     }).join("");
+  }
+
+  // The morning head-hunt's verdict from reading the whole posting. Shown
+  // above the automatic breakdown because it is the better-informed of the two.
+  function deepLine(j) {
+    var d = j.deep;
+    if (!d || typeof d.score !== "number") return "";
+    return '<p class="deep">Head-hunted <b class="mono">' + d.score + "</b>/100 \u00b7 <b>" + esc(d.verdict) + "</b>" +
+      (d.gap ? ' <span class="gap">\u00b7 Biggest gap: ' + esc(d.gap) + "</span>" : "") + "</p>";
   }
 
   // The four parts on one line; the reasons behind them one tap away.
