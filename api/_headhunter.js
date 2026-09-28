@@ -298,7 +298,11 @@ export function scoreRole(job, features) {
   const domain = industry + fn;
 
   // Practical: location (8), work mode stated (3), salary stated (4).
-  const where = `${location} ${title}`;
+  // Workday and several career sites carry the city in the posting URL
+  // (…/job/Warsaw/…) when the location field is blank.
+  let urlPath = "";
+  try { urlPath = decodeURIComponent(new URL(job.url || "").pathname).replace(/[-_/]+/g, " "); } catch { urlPath = ""; }
+  const where = `${location} ${title} ${urlPath}`;
   let loc, locNote;
   if (WARSAW.test(where) || (f.warsaw && !OTHER_PL.test(where))) { loc = 8; locNote = "Warsaw"; }
   else if (f.mode === "remote" && POLAND.test(where)) { loc = 8; locNote = "remote in Poland"; }

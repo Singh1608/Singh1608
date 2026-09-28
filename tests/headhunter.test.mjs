@@ -82,6 +82,10 @@ const remote = scoreRole({ title: "Consultant", company: "Acme", location: "Remo
   extractFeatures("Fully remote role. ".repeat(40), {}));
 check("remote in Poland counts as Warsaw", remote.parts.practical.note.startsWith("remote in Poland"), remote.parts.practical.note);
 
+const wd = scoreRole({ title: "Strategy Consultant", company: "Accenture", location: "",
+  url: "https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Warsaw/Strategy-Consultant_R001" }, null);
+check("city in a Workday URL counts as the location", wd.parts.practical.note.startsWith("Warsaw"), wd.parts.practical.note);
+
 // 8. Without the posting text, the title alone scores low on skills.
 const titleOnly = scoreRole({ title: "Business Transformation Consultant", company: "EY", location: "Warsaw" }, null);
 check("title-only scoring is marked as such", titleOnly.basis === "title only");
