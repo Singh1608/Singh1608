@@ -40,12 +40,32 @@ function unauthorized(req) {
 export const hashText = (t) => createHash("sha1").update(String(t || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 16);
 export const extraId = (url) => `url-${createHash("sha1").update(url).digest("hex").slice(0, 10)}`;
 
+// The lines a screener reads: requirements, experience, languages, location,
+// work mode, pay. Keeps a morning run over fifty postings readable, since the
+// rest is employer boilerplate. Full text is returned when brief is off.
+const BRIEF_LINE = /\b(requir\w*|experience|years?|skills?|knowledge|proficien\w*|familiar\w*|degree|must|should|you will|you'll|responsib\w*|languages?|polish|german|french|english|fluent|salary|pln|eur|remote|hybrid|office|on-?site|location|warsaw|krak[oó]w|nice to have|preferred|qualif\w*|background|expertise|ability|certif\w*|we offer|contract|b2b)\b/i;
+const MAX_BRIEF = 2600;
+export function brief(text) {
+  const lines = String(text || "").split(/\n+|(?<=[.;•])\s+(?=[A-Z•-])/).map((l) => l.trim()).filter((l) => l.length > 3);
+  const intro = lines.slice(0, 3).join(" ").slice(0, 300);
+  const seen = new Set();
+  const keep = [];
+  for (const l of lines.slice(3)) {
+    const k = l.toLowerCase();
+    if (!BRIEF_LINE.test(l) || seen.has(k)) continue;
+    seen.add(k);
+    keep.push(l.slice(0, 300));
+  }
+  return `${intro}\n- ${keep.join("\n- ")}`.slice(0, MAX_BRIEF);
+}
+
 function list(v) {
   return String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
 }
 
 async function shortlist(query) {
   const min = Number.isFinite(Number(query.min)) ? Number(query.min) : DEFAULT_MIN;
+  const short = query.brief === "1" || query.brief === "true";
   const ids = new Set(list(query.ids));
   // Only postings on an employer's own career site or ATS: the same test the
   // pipeline applies to every link it stores.
@@ -85,7 +105,7 @@ async function shortlist(query) {
         found_at: r.found_at || null,
         state: v ? v.state : "not reached",
         state_reason: v?.reason || null,
-        text,
+        text: short ? brief(text) : text,
         text_hash,
         deep,
         needs_scoring: !!text && (!deep || deep.text_hash !== text_hash),

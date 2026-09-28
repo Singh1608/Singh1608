@@ -77,6 +77,11 @@ const extra = await call({ method: "GET", headers: auth, query: { min: "101", ur
 check("only employer career-site URLs are fetched", extra.body.roles.length === 1 && extra.body.roles[0].extra,
   JSON.stringify(extra.body.roles.map((x) => x.url)));
 
+const b = await call({ method: "GET", headers: auth, query: { brief: "1" } });
+const bt = b.body.roles.find((x) => x.id === "c-101");
+check("brief keeps requirement lines and the same hash", /3-5 years/.test(bt.text) && bt.text_hash === top.text_hash && bt.text.length < top.text.length,
+  bt.text.slice(0, 120));
+
 // Store
 const bad = cleanResult({ score: 140, verdict: "APPLY" });
 check("an out-of-range score is rejected", bad === null);
