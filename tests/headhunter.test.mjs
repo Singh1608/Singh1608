@@ -1,6 +1,6 @@
 // The Head Hunter score: four parts out of 100 and the two rules behind them.
 import { readFileSync } from "node:fs";
-import { scoreRole, extractFeatures, BANDS, bandOf, SKILLS, WEIGHTS } from "../api/_headhunter.js";
+import { scoreRole, extractFeatures, BANDS, bandOf, SKILLS, WEIGHTS, languagesRequired } from "../api/_headhunter.js";
 import { plainText } from "../api/_verify.js";
 
 let n = 0, failed = 0;
@@ -104,6 +104,33 @@ check("an operations-run role gets no function credit", ops.parts.domain.score =
 check("securities operations counts as missing", ops.parts.skills.missing.some((m) => /securities operations/.test(m)));
 const opsX = scoreRole({ title: "Operations Transformation Expert", company: "Acme", location: "Warsaw" }, null);
 check("a transformation title outranks the 'expert' ops rule", opsX.parts.domain.score >= 6 + 5, String(opsX.parts.domain.score));
+
+// 8c. Language requirements read from the posting (wording from the live feed).
+const REQ = [
+  "3–6 years of professional experience.\nFluent Polish and strong English\nStrong structured problem-solving skills",
+  "Professional working proficiency in Polish and English at C1 level or above",
+  "Excellent English and Polish communication skills (written & spoken) required",
+  "Fluent English and Polish, with readiness to travel between our offices in Poland",
+  "Fluency in written and spoken Polish and English",
+  "Znajomość języka polskiego w stopniu biegłym",
+];
+const SOFTS = [
+  "Fluency in English , any other languages (German, French, Spanish, Italian, Nordics) would be an asset",
+  "German and other European languages are highly valued",
+  "Polish language classes for foreign employees",
+  "Polish language skills preferred.",
+  "At least basic understanding of the Polish insurance market, including relevant market trends",
+  "Additional European language skills such as Italian, French, Spanish, or German",
+  "Strong communicator with fluency in English.",
+  "A strong understanding of Polish accounting and tax regulations",
+];
+check("every real 'Polish required' wording is caught", REQ.every((t) => languagesRequired(t).includes("Polish")),
+  JSON.stringify(REQ.map((t) => languagesRequired(t))));
+check("soft or adjectival language mentions are not", SOFTS.every((t) => languagesRequired(t).length === 0),
+  JSON.stringify(SOFTS.map((t) => languagesRequired(t))));
+const pl = scoreRole({ title: "Management Consultant", company: "Adaptovate", location: "Warsaw" },
+  extractFeatures("Fluent Polish and strong English. ".repeat(20)));
+check("a required language excludes the role", pl.excluded === "posting requires Polish", String(pl.excluded));
 
 // 9. Bands.
 check("bands cover 0-100 in order", bandOf(100) === "strong" && bandOf(0) === "long" && bandOf(BANDS[1].min) === BANDS[1].key);

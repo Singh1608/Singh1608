@@ -472,7 +472,9 @@
       // Open is the working shortlist, so closed roles leave it. Flagged,
       // Applied and Dismissed keep them, tagged, because what he marked still
       // matters after the posting ends.
-      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job)) return false; }
+      // A role requiring a language he does not speak leaves Open too, but
+      // stays under All with the reason, in case the reading was wrong.
+      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job) || job.excluded) return false; }
       else if (filter === "closed") { if (!isClosed(job)) return false; }
       else if (st !== filter) return false;
     }
@@ -489,7 +491,7 @@
       var st = statusOf(j);
       c.all++;
       if (isClosed(j)) c.closed++;
-      else if (st === "new" || st === "flagged") c.open++;
+      else if ((st === "new" || st === "flagged") && !j.excluded) c.open++;
       if (st === "flagged") c.flagged++;
       if (st === "applied") c.applied++;
       if (st === "dismissed") c.dismissed++;
@@ -614,7 +616,7 @@
       var why = dead
         ? '<p class="closed-why">' + esc((j.closed && j.closed.reason) || "link no longer works") +
           (j.closed && j.closed.since ? " \u00b7 found " + esc(String(j.closed.since).slice(0, 10)) : "") + "</p>"
-        : "";
+        : j.excluded ? '<p class="closed-why">Not for you: ' + esc(j.excluded) + "</p>" : "";
       return '' +
         '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") + (dead ? " is-closed" : "") +
           '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +

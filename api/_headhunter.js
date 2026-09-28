@@ -188,6 +188,38 @@ const WARSAW = /\b(warsaw|warszawa|warschau)\b/i;
 const OTHER_PL = /\b(krak[oó]w|cracow|wroc[lł]aw|gda[nń]sk|gdynia|sopot|tricity|pozna[nń]|[lł][oó]d[zź]|katowice|lublin|szczecin|bydgoszcz|bia[lł]ystok|rzesz[oó]w|toru[nń]|gliwice)\b/i;
 const POLAND = /\b(poland|polska|pl)\b/i;
 
+// --- language requirements ---------------------------------------------------
+//
+// A posting that requires a language he does not speak is out, however well
+// it scores. The title-only check in _lib.js cannot see "Fluent Polish and
+// strong English" in the body, and five of the first shortlist's top roles
+// said exactly that. Soft wording ("an asset", "preferred", "Polish classes
+// for foreign employees") and the language used as an adjective ("the Polish
+// insurance market") do not count.
+const LANGS = "polish|german|french|dutch|flemish|spanish|italian|portuguese|czech|slovak|hungarian|romanian|" +
+  "bulgarian|croatian|serbian|slovenian|norwegian|swedish|danish|finnish|russian|ukrainian|turkish|greek|" +
+  "hebrew|japanese|korean|mandarin|chinese";
+const SOFT = /\b(assets?|plus|advantage\w*|nice[- ]to[- ]have|valued|preferred|beneficial|welcome\w*|bonus|classes|lessons|courses?|desirable|appreciated|optional|would help|is helpful|ideally)\b/i;
+const NOT_LANGUAGE = new RegExp(`\\b(${LANGS})\\s+(market|clients?|customers?|law|companies|company|entit\\w*|offices?|z[lł]oty|regulat\\w*|accounting|gaap|tax\\w*|business|banks?|economy|subsidiar\\w*|operations?|citizens?|work permit)`, "gi");
+const REQUIRED_BEFORE = new RegExp(`\\b(fluent|fluency|native|excellent|very good|good command|strong|business[- ]level|professional|proficien\\w*|advanced|c1|c2|b2)\\b[^.;•\\n]{0,50}?\\b(${LANGS})\\b`, "i");
+const REQUIRED_AFTER = new RegExp(`\\b(${LANGS})\\b[^.;•\\n]{0,40}?\\b(required|mandatory|a must|is a must|essential|c1|c2|b2|native|fluent|fluency)\\b`, "i");
+
+export function languagesRequired(text = "") {
+  const found = new Set();
+  if (/znajomo[sś][cć] j[eę]zyka polskiego|j[eę]zyk polski|bieg[lł]a znajomo[sś][cć] polskiego/i.test(text)) found.add("Polish");
+  for (const raw of String(text).split(/\n+|(?<=[.;•])\s+/)) {
+    const line = raw.replace(NOT_LANGUAGE, " ");
+    if (!new RegExp(`\\b(${LANGS})\\b`, "i").test(line) || SOFT.test(line)) continue;
+    for (const re of [REQUIRED_BEFORE, REQUIRED_AFTER]) {
+      const m = line.match(re);
+      if (!m) continue;
+      const lang = (m[2] && new RegExp(`^(${LANGS})$`, "i").test(m[2]) ? m[2] : m[1]).toLowerCase();
+      found.add(lang.charAt(0).toUpperCase() + lang.slice(1));
+    }
+  }
+  return [...found];
+}
+
 // --- extraction (runs in the daily check) --------------------------------------
 
 const MODE_RE = [
@@ -220,6 +252,7 @@ export function extractFeatures(text = "", meta = {}) {
     fs_mentions: fsMentions,
     mismatch,
     warsaw: WARSAW.test(body),
+    languages_required: languagesRequired(body),
     core_mentions: (body.match(new RegExp(CORE_FUNCTION.source, "gi")) || []).length,
   };
 }
@@ -319,8 +352,11 @@ export function scoreRole(job, features) {
   ].join("; ");
 
   const total = skills + seniority + domain + practical;
+  const langs = (features && features.languages_required) || [];
   return {
     total,
+    // Out regardless of score: he cannot apply to a role in a language he does not speak.
+    excluded: langs.length ? `posting requires ${langs.join(" and ")}` : null,
     band: bandOf(total),
     basis,
     parts: {

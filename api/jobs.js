@@ -82,6 +82,7 @@ export async function feedView() {
       band: hh.band,
       score_basis: hh.basis,
       score_parts: hh.parts,
+      excluded: hh.excluded,
       // The morning head-hunt's reading of the full posting, when it has run.
       deep: deep[j.id] || null,
       posted_at: posted,
@@ -97,7 +98,7 @@ export async function feedView() {
       // page, from api/overrides.js.
       category: categorize(j.title),
       // A single field the page can trust: worth showing, or not.
-      actionable: !closed && !j.gated_out,
+      actionable: !closed && !j.gated_out && !hh.excluded,
     };
   });
 
