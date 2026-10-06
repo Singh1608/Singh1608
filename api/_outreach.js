@@ -1,124 +1,83 @@
-/**
- * Apollo.io Recruiter Outreach Engine
- *
- * Integrated into Poland job-scraper pipeline
- * Searches for recruiters, builds campaigns, and prepares outreach
- */
+// Apollo.io recruiter search and outreach drafts.
+//
+//   GET  /api/outreach                                    -> status
+//   POST /api/outreach { action: "search", companies, locations, titles? }
+//   POST /api/outreach { action: "enrich", id }           -> email (spends an Apollo credit)
+//   POST /api/outreach { action: "variants", recruiter, targetRole }
 
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
-const APOLLO_API_URL = 'https://api.apollo.io/v1';
+const APOLLO_API_URL = 'https://api.apollo.io/api/v1';
 
-if (!APOLLO_API_KEY) {
-  console.warn('⚠️  APOLLO_API_KEY not set - outreach searches will be disabled');
+const DEFAULT_COMPANIES = ['Citi', 'Capco', 'EY', 'Accenture', 'Marsh McLennan', 'State Street'];
+const DEFAULT_LOCATIONS = ['Warsaw, Poland'];
+const DEFAULT_TITLES = ['Recruiter', 'Talent Acquisition', 'Talent Acquisition Partner', 'Sourcer', 'HR Business Partner'];
+
+async function apollo(endpoint, body) {
+  if (!APOLLO_API_KEY) throw new Error('APOLLO_API_KEY is not set in Vercel');
+  const response = await fetch(`${APOLLO_API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'x-api-key': APOLLO_API_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const detail = (await response.text()).slice(0, 300);
+    throw new Error(`Apollo ${endpoint} returned ${response.status}: ${detail}`);
+  }
+  return response.json();
 }
 
-/**
- * Apollo.io API Client
- */
-class ApolloClient {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-  }
-
-  async request(endpoint, method = 'GET', body = null) {
-    if (!this.apiKey) {
-      throw new Error('Apollo API key not configured');
-    }
-
-    const url = `${APOLLO_API_URL}${endpoint}`;
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'x-api-key': this.apiKey,
-      },
-    };
-
-    if (body) {
-      options.body = JSON.stringify(body);
-    }
-
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        throw new Error(`Apollo API error: ${response.status} ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Request to ${endpoint} failed:`, error.message);
-      throw error;
-    }
-  }
-
-  async searchOrganizations(filters) {
-    const body = {
-      q_organization_name: filters.name || '',
-      q_organization_locations: filters.locations || [],
-      page: 1,
-      per_page: 50,
-    };
-    return this.request('/organizations/search', 'POST', body);
-  }
-
-  async searchPeople(filters) {
-    const body = {
-      q_organization_ids: filters.organizationIds || [],
-      q_job_titles: filters.jobTitles || [],
-      q_person_departments: filters.departments || [],
-      q_organization_locations: filters.locations || [],
-      page: 1,
-      per_page: 100,
-    };
-    return this.request('/people/search', 'POST', body);
-  }
+// Apollo's location filter on companies is HQ location, so global employers
+// with Warsaw offices would be dropped; match by name and filter people by location instead.
+async function findOrganization(name) {
+  const data = await apollo('/mixed_companies/search', { q_organization_name: name, page: 1, per_page: 3 });
+  const orgs = [...(data.organizations || []), ...(data.accounts || [])];
+  const org = orgs[0];
+  return org ? { query: name, id: org.organization_id || org.id, name: org.name } : { query: name, id: null };
 }
 
-/**
- * Search for recruiters at target companies
- */
-async function searchRecruiters(companies, locations) {
-  if (!APOLLO_API_KEY) {
-    return { error: 'Apollo API key not configured', recruiters: [] };
-  }
+async function searchRecruiters({ companies, locations, titles }) {
+  const orgs = await Promise.all(companies.map(findOrganization));
+  const ids = orgs.filter((o) => o.id).map((o) => o.id);
+  if (ids.length === 0) return { organizations: orgs, recruiters: [] };
 
-  const client = new ApolloClient(APOLLO_API_KEY);
-  const allRecruiters = [];
+  const data = await apollo('/mixed_people/api_search', {
+    organization_ids: ids,
+    person_titles: titles,
+    person_locations: locations,
+    include_similar_titles: true,
+    page: 1,
+    per_page: 100,
+  });
 
-  try {
-    // Search for each company
-    const orgResults = await Promise.all(
-      companies.map((company) =>
-        client.searchOrganizations({
-          name: company,
-          locations,
-        })
-      )
-    );
+  const recruiters = (data.people || []).map((p) => ({
+    id: p.id,
+    first_name: p.first_name,
+    last_name: p.last_name || p.last_name_obfuscated || '',
+    title: p.title || '',
+    company: p.organization?.name || '',
+    has_email: p.has_email ?? null,
+    linkedin_url: p.linkedin_url || null,
+  }));
+  return { organizations: orgs, recruiters, total: data.total_entries ?? recruiters.length };
+}
 
-    const organizationIds = orgResults
-      .flatMap((result) => result.organizations || [])
-      .map((org) => org.id);
-
-    if (organizationIds.length === 0) {
-      return { error: 'No organizations found', recruiters: [] };
-    }
-
-    // Search for recruiters in those organizations
-    const recruiterResults = await client.searchPeople({
-      organizationIds,
-      jobTitles: ['Recruiter', 'Talent Acquisition', 'Hiring Manager', 'HR Manager'],
-      departments: ['HR', 'Talent Acquisition', 'Human Resources'],
-      locations,
-    });
-
-    return {
-      recruiters: recruiterResults.people || [],
-      organizations: organizationIds.length,
-    };
-  } catch (error) {
-    return { error: error.message, recruiters: [] };
-  }
+async function enrichPerson(id) {
+  const data = await apollo('/people/match', { id, reveal_personal_emails: false });
+  const p = data.person || {};
+  return {
+    id: p.id || id,
+    first_name: p.first_name,
+    last_name: p.last_name,
+    title: p.title || '',
+    company: p.organization?.name || '',
+    email: p.email || null,
+    email_status: p.email_status || null,
+    linkedin_url: p.linkedin_url || null,
+  };
 }
 
 /**
@@ -126,7 +85,7 @@ async function searchRecruiters(companies, locations) {
  */
 function buildMessageVariants(recruiter, targetRole, achievements) {
   const firstName = recruiter.first_name || 'there';
-  const company = recruiter.organization_name || 'your organization';
+  const company = recruiter.company || recruiter.organization_name || 'your organization';
 
   const variants = {
     A: {
@@ -188,89 +147,57 @@ Chandrashekhar`,
   return variants;
 }
 
-/**
- * Main outreach API handler
- */
+const ACHIEVEMENTS = [
+  'screened ~50 growth initiatives, building FY2026 pipeline targeting AED 500mn+ value',
+  'cut Treasury process count by 31% (135+ processes) in 2 months',
+  'reclassified 1,500+ customer groups for sector-focused coverage',
+];
+
+const list = (v, fallback) =>
+  Array.isArray(v) && v.length ? v.map((s) => String(s).trim()).filter(Boolean) : fallback;
+
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  const { action, companies, locations } = req.body || {};
-
+  const body = req.body || {};
   try {
-    if (action === 'search') {
-      // Search for recruiters
-      const targetCompanies = companies || [
-        'Citi',
-        'Capco',
-        'EY',
-        'Accenture',
-        'Marsh McLennan',
-        'State Street',
-      ];
-      const targetLocations = locations || ['Warsaw', 'Poland'];
-
-      const result = await searchRecruiters(targetCompanies, targetLocations);
-      return res.status(200).json({
-        status: 'success',
-        action: 'recruiter_search',
-        timestamp: new Date().toISOString(),
-        ...result,
+    if (body.action === 'search') {
+      const result = await searchRecruiters({
+        companies: list(body.companies, DEFAULT_COMPANIES),
+        locations: list(body.locations, DEFAULT_LOCATIONS),
+        titles: list(body.titles, DEFAULT_TITLES),
       });
+      return res.status(200).json({ status: 'success', timestamp: new Date().toISOString(), ...result });
     }
 
-    if (action === 'variants') {
-      // Generate message variants for a recruiter
-      const { recruiter, targetRole } = req.body;
+    if (body.action === 'enrich') {
+      if (!body.id) return res.status(400).json({ status: 'error', message: 'Missing Apollo person id' });
+      return res.status(200).json({ status: 'success', person: await enrichPerson(body.id) });
+    }
 
+    if (body.action === 'variants') {
+      const { recruiter, targetRole } = body;
       if (!recruiter || !targetRole) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'Missing recruiter or targetRole data',
-        });
+        return res.status(400).json({ status: 'error', message: 'Missing recruiter or targetRole data' });
       }
-
-      const achievements = [
-        'screened ~50 growth initiatives, building FY2026 pipeline targeting AED 500mn+ value',
-        'cut Treasury process count by 31% (135+ processes) in 2 months',
-        'reclassified 1,500+ customer groups for sector-focused coverage',
-      ];
-
-      const variants = buildMessageVariants(recruiter, targetRole, achievements);
-
       return res.status(200).json({
         status: 'success',
-        action: 'message_variants',
-        recruiter: recruiter.email,
-        variants,
+        recruiter: recruiter.email || null,
+        variants: buildMessageVariants(recruiter, targetRole, ACHIEVEMENTS),
       });
     }
 
-    // Default: return outreach system status
-    res.status(200).json({
+    return res.status(200).json({
       status: 'ok',
       service: 'apollo-recruiter-outreach',
       apiKeyConfigured: !!APOLLO_API_KEY,
-      actions: ['search', 'variants'],
-      docs: 'See /api/_outreach.js for integration details',
+      actions: ['search', 'enrich', 'variants'],
     });
   } catch (error) {
-    console.error('Outreach API error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-      service: 'apollo-recruiter-outreach',
-    });
+    console.error('outreach error:', error.message);
+    return res.status(502).json({ status: 'error', message: error.message });
   }
 }

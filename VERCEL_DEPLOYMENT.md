@@ -9,7 +9,7 @@ Your recruiter outreach system is now integrated into your Vercel deployment. Th
 - `GET /api/outreach` — System status
 
 **New Dashboard:**
-- `/public/outreach.html` — Campaign management UI
+- `/outreach` — recruiter search dashboard (served from `public/outreach.html`)
 
 **Updated Configuration:**
 - `vercel.json` — Added outreach function config
@@ -24,18 +24,16 @@ Your Vercel project: `prj_DhAdvPln1ZTZgXPqiOk08gWIV1Qe`
 2. Add these variables:
 
 ```
-APOLLO_API_KEY = AOSj1yDAEL_xI9z-zPMOvA
+APOLLO_API_KEY = <your Apollo API key — never commit it>
 ```
 
-*Note: This is already set in GitHub Secrets; Vercel will need it too.*
+*Production only picks up a new env var on the next deployment.*
 
 ### 2. Deploy to Vercel
 
-Option A: **Auto-deploy from GitHub**
-```bash
-git push origin claude/job-scraper-polish-companies-3n0xb0
-```
-Vercel automatically deploys on push.
+Pushes to `claude/job-scraper-polish-companies-3n0xb0` build a **Preview** deployment only.
+To put it live on `poland-job-scraper.vercel.app`: Vercel Dashboard → poland-job-scraper →
+**Deployments** → the newest Preview for that branch → **⋯ → Promote to Production**.
 
 Option B: **Manual deploy via Vercel CLI**
 ```bash
@@ -49,12 +47,12 @@ Once deployed, test the endpoints:
 
 **Check service status:**
 ```bash
-curl https://your-project.vercel.app/api/outreach
+curl https://poland-job-scraper.vercel.app/api/outreach
 ```
 
 **Search for recruiters:**
 ```bash
-curl -X POST https://your-project.vercel.app/api/outreach \
+curl -X POST https://poland-job-scraper.vercel.app/api/outreach \
   -H "Content-Type: application/json" \
   -d '{
     "action": "search",
@@ -65,7 +63,7 @@ curl -X POST https://your-project.vercel.app/api/outreach \
 
 **Get message variants:**
 ```bash
-curl -X POST https://your-project.vercel.app/api/outreach \
+curl -X POST https://poland-job-scraper.vercel.app/api/outreach \
   -H "Content-Type: application/json" \
   -d '{
     "action": "variants",
@@ -83,7 +81,7 @@ curl -X POST https://your-project.vercel.app/api/outreach \
 
 ### From Dashboard
 
-1. Open `https://your-project.vercel.app/outreach.html`
+1. Open `https://poland-job-scraper.vercel.app/outreach`
 2. Enter target companies and locations
 3. Click **🚀 Launch Recruiter Search & Build Campaign**
 4. System will:
@@ -213,7 +211,7 @@ To change filters, edit the `jobTitles` and `departments` arrays in `searchRecru
 
 ### Check API Status
 ```bash
-curl https://your-project.vercel.app/api/outreach
+curl https://poland-job-scraper.vercel.app/api/outreach
 ```
 
 Response example:
@@ -222,7 +220,7 @@ Response example:
   "status": "ok",
   "service": "apollo-recruiter-outreach",
   "apiKeyConfigured": true,
-  "actions": ["search", "variants"]
+  "actions": ["search", "enrich", "variants"]
 }
 ```
 
@@ -253,7 +251,7 @@ A: This is expected after first deployment. Run a search to populate the list.
 1. ✅ Deploy to Vercel (via GitHub push)
 2. ✅ Set APOLLO_API_KEY in Vercel environment
 3. ✅ Test `/api/outreach` endpoint
-4. ✅ Open `/public/outreach.html` dashboard
+4. ✅ Open the `/outreach` dashboard
 5. ✅ Run recruiter search
 6. ✅ Build campaign
 7. ✅ Review and send (local CLI or API)
@@ -276,8 +274,3 @@ For issues or feature requests:
 - See `/OUTREACH_SETUP.md` for local CLI workflows
 - Review `/api/_outreach.js` for API implementation details
 
----
-
-**Deployed by:** Claude Haiku 4.5  
-**Deployment branch:** `claude/job-scraper-polish-companies-3n0xb0`  
-**Project:** `prj_DhAdvPln1ZTZgXPqiOk08gWIV1Qe`

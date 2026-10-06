@@ -19,3 +19,6 @@ tools/build_experience_master.py
 # Intermediate output from tools/ — discovery data, never committed.
 .work/
 .env
+
+# Local Apollo key file — never commit.
+apollo.env

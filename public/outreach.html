@@ -252,12 +252,8 @@
           <div class="status-value" id="recruiter-count">0</div>
         </div>
         <div class="status-card">
-          <div class="status-label">Campaigns</div>
-          <div class="status-value" id="campaign-count">0</div>
-        </div>
-        <div class="status-card">
-          <div class="status-label">Emails Sent</div>
-          <div class="status-value" id="email-count">0</div>
+          <div class="status-label">Companies matched</div>
+          <div class="status-value" id="company-count">–</div>
         </div>
       </div>
 
@@ -265,8 +261,8 @@
         <button onclick="searchRecruiters()">
           🔍 Search Apollo
         </button>
-        <button onclick="buildCampaign()">
-          📧 Build Campaign
+        <button onclick="exportRecruiters()">
+          ⬇️ Export emails (CSV)
         </button>
         <button onclick="checkStatus()">
           🔄 Refresh Status
@@ -284,10 +280,10 @@
         </div>
         <div>
           <label for="locations">Locations (comma-separated)</label>
-          <input type="text" id="locations" value="Warsaw, Poland" placeholder="Locations...">
+          <input type="text" id="locations" value="Warsaw" placeholder="Locations...">
         </div>
-        <button onclick="launchCampaign()" style="width: 100%; padding: 1rem; background: #10b981;">
-          🚀 Launch Recruiter Search & Build Campaign
+        <button onclick="searchRecruiters()" style="width: 100%; padding: 1rem; background: #10b981;">
+          🚀 Search Recruiters
         </button>
       </div>
     </div>
@@ -321,110 +317,98 @@
   </div>
 
   <script>
-    const API_BASE = window.location.origin;
+    let recruiters = [];
 
-    function showMessage(text, type = 'info') {
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const csv = (id) => document.getElementById(id).value.split(',').map((s) => s.trim()).filter(Boolean);
+
+    function showMessage(text, type = 'info', sticky = false) {
       const msgDiv = document.getElementById('message');
-      msgDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
-      setTimeout(() => {
-        msgDiv.innerHTML = '';
-      }, 5000);
+      msgDiv.innerHTML = `<div class="message ${type}">${esc(text)}</div>`;
+      if (!sticky) setTimeout(() => { msgDiv.innerHTML = ''; }, 6000);
+    }
+
+    async function api(body) {
+      const res = await fetch('/api/outreach', body
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        : undefined);
+      const data = await res.json().catch(() => ({ status: 'error', message: `HTTP ${res.status}` }));
+      if (!res.ok || data.status === 'error') throw new Error(data.message || `HTTP ${res.status}`);
+      return data;
     }
 
     async function checkStatus() {
       try {
-        const res = await fetch('/api/outreach');
-        const data = await res.json();
-
-        if (data.status === 'ok') {
-          document.getElementById('api-status').textContent = '✅';
-          showMessage('System online', 'success');
-        } else {
-          document.getElementById('api-status').textContent = '⚠️';
-        }
+        const data = await api();
+        document.getElementById('api-status').textContent = data.apiKeyConfigured ? '✅' : '⚠️';
+        if (!data.apiKeyConfigured) showMessage('API is up, but APOLLO_API_KEY is not set in Vercel.', 'error', true);
       } catch (error) {
         document.getElementById('api-status').textContent = '❌';
-        showMessage('API connection failed: ' + error.message, 'error');
+        showMessage('API connection failed: ' + error.message, 'error', true);
       }
     }
 
     async function searchRecruiters() {
-      const companies = document.getElementById('companies').value.split(',').map(c => c.trim());
-      const locations = document.getElementById('locations').value.split(',').map(l => l.trim());
-
-      showMessage('🔍 Searching Apollo.io...', 'info');
-
+      showMessage('🔍 Searching Apollo.io...', 'info', true);
       try {
-        const res = await fetch('/api/outreach', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'search',
-            companies,
-            locations,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data.status === 'success') {
-          document.getElementById('recruiter-count').textContent = data.recruiters.length;
-          displayRecruiters(data.recruiters);
-          showMessage(`Found ${data.recruiters.length} recruiters!`, 'success');
-        } else {
-          showMessage(data.error || 'Search failed', 'error');
-        }
+        const data = await api({ action: 'search', companies: csv('companies'), locations: csv('locations') });
+        recruiters = data.recruiters;
+        document.getElementById('recruiter-count').textContent = recruiters.length;
+        document.getElementById('company-count').textContent =
+          data.organizations.filter((o) => o.id).length + '/' + data.organizations.length;
+        displayRecruiters();
+        const missing = data.organizations.filter((o) => !o.id).map((o) => o.query);
+        showMessage(`Found ${recruiters.length} recruiters` + (missing.length ? ` — no Apollo match for: ${missing.join(', ')}` : ''), 'success');
       } catch (error) {
-        showMessage('Search error: ' + error.message, 'error');
+        showMessage('Search failed: ' + error.message, 'error', true);
       }
     }
 
-    function displayRecruiters(recruiters) {
+    function displayRecruiters() {
       const container = document.getElementById('recruiter-container');
-
       if (recruiters.length === 0) {
-        container.innerHTML = `
-          <div class="recruiter-item">
-            <div class="recruiter-info">
-              <div class="recruiter-name">No recruiters found</div>
-              <div class="recruiter-company">Try different search criteria</div>
-            </div>
-          </div>
-        `;
+        container.innerHTML = `<div class="recruiter-item"><div class="recruiter-info">
+          <div class="recruiter-name">No recruiters found</div>
+          <div class="recruiter-company">Try different companies or locations</div></div></div>`;
         return;
       }
-
-      container.innerHTML = recruiters.slice(0, 10).map(r => `
+      container.innerHTML = recruiters.map((r, i) => `
         <div class="recruiter-item">
           <div class="recruiter-info">
-            <div class="recruiter-name">${r.first_name} ${r.last_name}</div>
-            <div class="recruiter-company">${r.organization_name} • ${r.headline}</div>
+            <div class="recruiter-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
+            <div class="recruiter-company">${esc(r.company)} • ${esc(r.title)}</div>
+            <div class="recruiter-company" id="email-${i}">${r.email ? esc(r.email) : (r.has_email === false ? 'No email in Apollo' : '')}</div>
           </div>
           <div class="recruiter-actions">
-            <button class="btn-small" onclick="copyEmail('${r.email}')">📋 Copy</button>
+            <button class="btn-small" onclick="getEmail(${i})" ${r.email || r.has_email === false ? 'disabled' : ''}>📧 Get email</button>
           </div>
-        </div>
-      `).join('');
+        </div>`).join('');
     }
 
-    function copyEmail(email) {
-      navigator.clipboard.writeText(email);
-      showMessage(`Copied: ${email}`, 'success');
+    async function getEmail(i) {
+      const r = recruiters[i];
+      showMessage(`Revealing email for ${r.first_name} (uses 1 Apollo credit)...`, 'info', true);
+      try {
+        const { person } = await api({ action: 'enrich', id: r.id });
+        Object.assign(r, { email: person.email, last_name: person.last_name || r.last_name, email_status: person.email_status });
+        if (!person.email) r.has_email = false;
+        displayRecruiters();
+        showMessage(person.email ? `${person.email} (${person.email_status || 'unverified'})` : 'Apollo has no email for this person', person.email ? 'success' : 'error');
+      } catch (error) {
+        showMessage('Email lookup failed: ' + error.message, 'error', true);
+      }
     }
 
-    async function buildCampaign() {
-      showMessage('🏗️ Building campaign...', 'info');
-      document.getElementById('campaign-count').textContent = parseInt(document.getElementById('recruiter-count').textContent) || 0;
-      showMessage('Campaign built! Ready to review variants.', 'success');
+    function exportRecruiters() {
+      const withEmail = recruiters.filter((r) => r.email);
+      if (!withEmail.length) return showMessage('Reveal at least one email first.', 'error');
+      const rows = [['first_name', 'last_name', 'title', 'company', 'email', 'email_status'],
+        ...withEmail.map((r) => [r.first_name, r.last_name, r.title, r.company, r.email, r.email_status || ''])];
+      const text = rows.map((row) => row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/csv' })), download: 'recruiters.csv' });
+      a.click();
     }
 
-    async function launchCampaign() {
-      await searchRecruiters();
-      await new Promise(r => setTimeout(r, 1000));
-      await buildCampaign();
-    }
-
-    // Initialize
     checkStatus();
   </script>
 </body>
