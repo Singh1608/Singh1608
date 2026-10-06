@@ -1,0 +1,51 @@
+{
+  "variants": [
+    {
+      "id": "A",
+      "name": "Direct + Value Prop",
+      "subjectTemplate": "Strategy transformation opportunity at {company}",
+      "bodyTemplate": "Hi {firstName},\n\nI noticed {company}'s focus on {companyFocus} and your team's work on {roleContext}. I've spent {yearsRelevant} years building transformation strategies—most recently driving {keyAchievement}—and I believe I could accelerate your {roleGoal}.\n\nI'm relocating to Warsaw and actively exploring roles that combine business strategy with hands-on execution. Your role caught my attention because {reasonWhyRole}.\n\nI'd welcome a brief conversation about how my experience in {domain} could support your team. My resume is attached.\n\nBest regards,\nChandrashekhar Singh"
+    },
+    {
+      "id": "B",
+      "name": "Warm Intro + Fit",
+      "subjectTemplate": "Quick intro - transformation BA looking to join {company} in Warsaw",
+      "bodyTemplate": "Hi {firstName},\n\nI'm Chandrashekhar, a business analyst and transformation strategist with {yearsExperience} years in financial services and operating model redesign. I'm exploring opportunities with {company} and came across your role for {roleBrief}.\n\nWhat drew me to {company}:\n• {companyReason1}\n• {companyReason2}\n• Your focus on {companyFocus}\n\nI've worked on similar initiatives at {previousCompanyExample}, where I {specificAchievement}. I'm now relocating to Warsaw and keen to find a role where I can contribute from day one.\n\nMight you have 15 minutes for a quick call? I'd love to learn more about what you're building.\n\nCheers,\nChandrashekhar"
+    },
+    {
+      "id": "C",
+      "name": "Story-Driven + Curiosity",
+      "subjectTemplate": "Turning Warsaw into my base — and {company} into my next challenge",
+      "bodyTemplate": "Hi {firstName},\n\nI'm making a strategic move: after {yearsInCurrent} years delivering transformation initiatives across banking, I'm relocating to Warsaw to build my next chapter. {company} is on my radar—specifically for {role}.\n\nWhy? Because {whyCompanyMatters}.\n\nMy background spans the exact challenges your team is likely facing:\n• Built {achievement1}\n• Led {achievement2}\n• Drove {achievement3}\n\nI'm not just sending resumes into the void—I do my research. Your role is compelling because {roleCompellingReason}, and I can see how my experience maps directly to {keyResponsibility}.\n\nI'd be grateful for a quick conversation to explore if we're a mutual fit. Happy to work around your schedule.\n\nAttached: my resume & background.\n\nChandrashekhar"
+    }
+  ],
+  "signatureVariations": [
+    "Chandrashekhar Singh",
+    "Chandrashekhar | Strategy & Transformation",
+    "Chandrashekhar Singh | Business Analyst & Transformation Strategist"
+  ],
+  "placeholders": {
+    "firstName": "Recruiter's first name",
+    "company": "Company name",
+    "companyFocus": "e.g., digital transformation, cost optimization",
+    "roleContext": "Role-specific context",
+    "yearsRelevant": "Years in relevant domain",
+    "keyAchievement": "Specific achievement from resume",
+    "roleGoal": "Goal of the role",
+    "reasonWhyRole": "Why this specific role matches",
+    "domain": "Domain expertise",
+    "yearsExperience": "Total years of experience",
+    "roleBrief": "Brief role description",
+    "companyReason1": "Reason to join company",
+    "companyReason2": "Another reason",
+    "previousCompanyExample": "Previous employer",
+    "specificAchievement": "Specific achievement from previous role",
+    "yearsInCurrent": "Years in current/previous role",
+    "whyCompanyMatters": "Why this company matters",
+    "achievement1": "Achievement 1",
+    "achievement2": "Achievement 2",
+    "achievement3": "Achievement 3",
+    "roleCompellingReason": "Why role is compelling",
+    "keyResponsibility": "Key responsibility that matches experience"
+  }
+}
