@@ -5,8 +5,6 @@
  * Searches for recruiters, builds campaigns, and prepares outreach
  */
 
-import fetch from 'node-fetch';
-
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
 const APOLLO_API_URL = 'https://api.apollo.io/v1';
 
