@@ -31,6 +31,9 @@
     },
     "api/headhunt.js": {
       "maxDuration": 60
+    },
+    "api/outreach.js": {
+      "maxDuration": 120
     }
   }
 }

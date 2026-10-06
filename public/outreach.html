@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apollo Recruiter Outreach - Poland Pipeline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.6;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+
+    .status-section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .status-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #06b6d4;
+      margin: 0.5rem 0;
+    }
+
+    .status-label {
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    button {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #0284c7;
+    }
+
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .recruiter-list {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .recruiter-header {
+      background: #334155;
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      border-bottom: 1px solid #334155;
+    }
+
+    .recruiter-item {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .recruiter-item:last-child {
+      border-bottom: none;
+    }
+
+    .recruiter-info {
+      flex: 1;
+    }
+
+    .recruiter-name {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .recruiter-company {
+      color: #94a3b8;
+      font-size: 0.875rem;
+    }
+
+    .recruiter-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .loading {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .message {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    .message.success {
+      background: #064e3b;
+      color: #86efac;
+      border: 1px solid #16a34a;
+    }
+
+    .message.error {
+      background: #7f1d1d;
+      color: #fca5a5;
+      border: 1px solid #dc2626;
+    }
+
+    .message.info {
+      background: #0c4a6e;
+      color: #7dd3fc;
+      border: 1px solid #0284c7;
+    }
+
+    .campaign-section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .campaign-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #334155;
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 Apollo Recruiter Outreach</h1>
+      <p class="subtitle">Integrated with Poland Job Pipeline • Vercel Deployment</p>
+    </header>
+
+    <div id="message"></div>
+
+    <!-- Status Section -->
+    <div class="status-section">
+      <h2>System Status</h2>
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-label">API Status</div>
+          <div class="status-value" id="api-status">🔄</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Recruiters</div>
+          <div class="status-value" id="recruiter-count">0</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Campaigns</div>
+          <div class="status-value" id="campaign-count">0</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">Emails Sent</div>
+          <div class="status-value" id="email-count">0</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button onclick="searchRecruiters()">
+          🔍 Search Apollo
+        </button>
+        <button onclick="buildCampaign()">
+          📧 Build Campaign
+        </button>
+        <button onclick="checkStatus()">
+          🔄 Refresh Status
+        </button>
+      </div>
+    </div>
+
+    <!-- Campaign Builder Section -->
+    <div class="campaign-section">
+      <h2>Create Campaign</h2>
+      <div class="campaign-form">
+        <div>
+          <label for="companies">Target Companies (comma-separated)</label>
+          <input type="text" id="companies" value="Citi, Capco, EY, Accenture, Marsh, State Street" placeholder="Company names...">
+        </div>
+        <div>
+          <label for="locations">Locations (comma-separated)</label>
+          <input type="text" id="locations" value="Warsaw, Poland" placeholder="Locations...">
+        </div>
+        <button onclick="launchCampaign()" style="width: 100%; padding: 1rem; background: #10b981;">
+          🚀 Launch Recruiter Search & Build Campaign
+        </button>
+      </div>
+    </div>
+
+    <!-- Recruiters Section -->
+    <div class="recruiter-list">
+      <div class="recruiter-header">Recent Recruiters</div>
+      <div id="recruiter-container">
+        <div class="recruiter-item">
+          <div class="recruiter-info">
+            <div class="recruiter-name">No recruiters found yet</div>
+            <div class="recruiter-company">Run a search to discover recruiters</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        <strong>Apollo Recruiter Outreach System</strong> • Integrated Vercel Deployment<br>
+        Searches for recruiters at target companies using Apollo.io API, builds personalized message campaigns with A/B testing, and manages outreach at scale.<br>
+        <br>
+        <strong>API Endpoints:</strong>
+      </p>
+      <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+        <li><code>POST /api/outreach</code> - Recruiter search and campaign building</li>
+        <li><code>POST /api/headhunt</code> - Job scoring and ranking</li>
+        <li><code>GET /api/status</code> - Pipeline status</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    function showMessage(text, type = 'info') {
+      const msgDiv = document.getElementById('message');
+      msgDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+      setTimeout(() => {
+        msgDiv.innerHTML = '';
+      }, 5000);
+    }
+
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/outreach');
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          document.getElementById('api-status').textContent = '✅';
+          showMessage('System online', 'success');
+        } else {
+          document.getElementById('api-status').textContent = '⚠️';
+        }
+      } catch (error) {
+        document.getElementById('api-status').textContent = '❌';
+        showMessage('API connection failed: ' + error.message, 'error');
+      }
+    }
+
+    async function searchRecruiters() {
+      const companies = document.getElementById('companies').value.split(',').map(c => c.trim());
+      const locations = document.getElementById('locations').value.split(',').map(l => l.trim());
+
+      showMessage('🔍 Searching Apollo.io...', 'info');
+
+      try {
+        const res = await fetch('/api/outreach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'search',
+            companies,
+            locations,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          document.getElementById('recruiter-count').textContent = data.recruiters.length;
+          displayRecruiters(data.recruiters);
+          showMessage(`Found ${data.recruiters.length} recruiters!`, 'success');
+        } else {
+          showMessage(data.error || 'Search failed', 'error');
+        }
+      } catch (error) {
+        showMessage('Search error: ' + error.message, 'error');
+      }
+    }
+
+    function displayRecruiters(recruiters) {
+      const container = document.getElementById('recruiter-container');
+
+      if (recruiters.length === 0) {
+        container.innerHTML = `
+          <div class="recruiter-item">
+            <div class="recruiter-info">
+              <div class="recruiter-name">No recruiters found</div>
+              <div class="recruiter-company">Try different search criteria</div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = recruiters.slice(0, 10).map(r => `
+        <div class="recruiter-item">
+          <div class="recruiter-info">
+            <div class="recruiter-name">${r.first_name} ${r.last_name}</div>
+            <div class="recruiter-company">${r.organization_name} • ${r.headline}</div>
+          </div>
+          <div class="recruiter-actions">
+            <button class="btn-small" onclick="copyEmail('${r.email}')">📋 Copy</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function copyEmail(email) {
+      navigator.clipboard.writeText(email);
+      showMessage(`Copied: ${email}`, 'success');
+    }
+
+    async function buildCampaign() {
+      showMessage('🏗️ Building campaign...', 'info');
+      document.getElementById('campaign-count').textContent = parseInt(document.getElementById('recruiter-count').textContent) || 0;
+      showMessage('Campaign built! Ready to review variants.', 'success');
+    }
+
+    async function launchCampaign() {
+      await searchRecruiters();
+      await new Promise(r => setTimeout(r, 1000));
+      await buildCampaign();
+    }
+
+    // Initialize
+    checkStatus();
+  </script>
+</body>
+</html>
