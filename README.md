@@ -1,11 +1,15 @@
-# job_scraper
+## Chandrashekhar Singh
 
-Finds job postings directly from company career pages/websites, filtered for
-English-speaking roles based in Poland.
+Management consultant working in wholesale banking — strategy, operating model
+design and business transformation.
 
-## How it works
+- Market entry cases, growth pipelines and coverage model design
+- Finance and treasury transformation, target operating models
+- Process reengineering, PMO and programme governance
+- Python, SQL and VBA for analysis and automation
 
-For each company in `config.yaml`, the scraper tries, in order:
+Master in Management, IESE Business School · BBA (Information Technology),
+Symbiosis International University
 
 1. **Known ATS, fast path** — if you give a `platform` + `slug` directly, it
    hits that platform's public API (structured JSON/XML, most reliable).
