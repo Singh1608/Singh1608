@@ -2,77 +2,931 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Poland Role Pipeline</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
+  /* Blue, light-shaded theme. Two colour codes carry meaning and nothing else
+     uses them: Head Hunter score band (blues, strongest to weakest) on the
+     card's left edge and score pill, and status (amber flagged, green applied, slate dismissed) on
+     the tag, the pressed button and the filter chip. Every text/background
+     pair here is at least 4.5:1. */
   :root {
     color-scheme: light;
-    --bg: #f3f6f5;
+    --bg: #f1f6fd;
+    --head-bg: #e6effc;
     --surface: #ffffff;
-    --ink: #16211e;
-    --muted: #5d6b66;
-    --line: #dce3e0;
-    --accent: #1f6f5c;
+    --surface-2: #eaf1fb;
+    --ink: #0e1e38;
+    --muted: #4a5f80;
+    --line: #d4e0f0;
+    --accent: #1d5fcc;
     --accent-ink: #ffffff;
+    --dim: #62779a;
+    --err: #b3261e;
+
+    /* Fit: Head Hunter score bands */
+    --t1: #1746b8;  --t1-bg: #e3ebfc;   /* Strong match 70+: deep blue */
+    --t2: #0b6b78;  --t2-bg: #dbf2f3;   /* Good match 55-69: teal */
+    --t3: #56657e;  --t3-bg: #edf0f5;   /* Stretch 40-54: slate */
+    --t4: #6b4f96;  --t4-bg: #f0ebf8;   /* Long shot under 40: muted violet */
+
+    /* Status */
+    --open: #1d5fcc;
+    --flag: #924300;       --flag-bg: #fdefd3;       --flag-line: #f0c67a;
+    --applied: #146236;    --applied-bg: #dcf5e5;    --applied-line: #8fd3aa;
+    --dismissed: #5c6679;  --dismissed-bg: #eceff4;  --dismissed-line: #c9d0db;
+    /* Set by the daily dead-role check, not by him */
+    --closed: #b3261e;     --closed-bg: #fde8e6;
+    --old: #7a5a12;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
-      --bg: #12171a;
-      --surface: #1a2125;
-      --ink: #e7eeeb;
-      --muted: #95a39e;
-      --line: #2b353a;
-      --accent: #5cc0a4;
-      --accent-ink: #07231d;
+      --bg: #0c1424;
+      --head-bg: #0f1a2e;
+      --surface: #131e33;
+      --surface-2: #1a2842;
+      --ink: #e5edfa;
+      --muted: #9fb3d1;
+      --line: #25365a;
+      --accent: #78aaff;
+      --accent-ink: #06142b;
+      --dim: #8193b0;
+      --err: #f2877e;
+
+      --t1: #8db4ff;  --t1-bg: #172a4f;
+      --t2: #5fd6d2;  --t2-bg: #0d2e33;
+      --t3: #aab6ca;  --t3-bg: #1f2939;
+      --t4: #c3aef0;  --t4-bg: #261f38;
+
+      --open: #78aaff;
+      --flag: #f4bb55;       --flag-bg: #372709;       --flag-line: #6b4c14;
+      --applied: #6ad8a0;    --applied-bg: #0e2e1f;    --applied-line: #1f5c3d;
+      --dismissed: #a1abbb;  --dismissed-bg: #1f2632;  --dismissed-line: #3a4457;
+      --closed: #f2877e;     --closed-bg: #3a1614;
+      --old: #e3c27a;
     }
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; }
   body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background: var(--bg);
     color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    padding: 24px 16px;
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 28px 24px;
-    max-width: 440px;
-    width: 100%;
-  }
-  h1 { font-size: 20px; margin: 0 0 8px; letter-spacing: -0.01em; }
-  p { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
-  a.go {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--accent);
-    color: var(--accent-ink);
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 15px;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 9px;
-    padding: 13px 20px;
-    min-height: 48px;
-    width: 100%;
+    line-height: 1.45;
   }
-  .fine { font-size: 12.5px; margin: 16px 0 0; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--head-bg);
+    border-bottom: 1px solid var(--line);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .head-inner { padding-block: 14px 10px; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  h1::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 0; }
+  /* Filter bar: five dropdowns, one row on desktop, two per row on a phone. */
+  .filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-bottom: 12px; }
+  .filters label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .filters .cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .fsel {
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink); width: 100%;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5f80'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 28px 8px 10px; min-height: 40px;
+    appearance: none; -webkit-appearance: none; cursor: pointer; text-overflow: ellipsis;
+  }
+  .fsel.is-set { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .fsel:focus-visible, .act:focus-visible, a:focus-visible, .linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .filterline { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--muted); padding-bottom: 10px; }
+  .filterline[hidden] { display: none; }
+  .clear { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 4px 0; cursor: pointer; }
+  @media (max-width: 560px) { .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (prefers-color-scheme: dark) {
+    .fsel { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239fb3d1'/%3E%3C/svg%3E"); }
+  }
+
+  main { padding-block: 14px 56px; }
+
+  .key { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .key summary { cursor: pointer; font-weight: 600; width: max-content; }
+  .legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px;
+  }
+  .legend b { font-weight: 600; color: var(--ink); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .swatch.round { border-radius: 50%; }
+  .swatch.dash { background: transparent; border: 1.5px dashed var(--c); border-radius: 999px; width: 16px; }
+  .swatch.mine { background: transparent; border: 1.5px solid var(--accent); border-radius: 999px; width: 16px; }
+
+  .job {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 4px solid var(--tier, var(--line));
+    border-radius: 10px; padding: 13px 14px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(14, 30, 56, 0.05);
+  }
+  .job.is-flagged { border-color: var(--flag-line); border-left-color: var(--tier, var(--line)); }
+  .job.is-applied { border-color: var(--applied-line); border-left-color: var(--tier, var(--line)); }
+  .job.is-dismissed { opacity: 0.6; }
+  .job-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .job-co { font-size: 12.5px; font-weight: 600; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .job-title { font-size: 15.5px; font-weight: 700; margin: 1px 0 0; line-height: 1.3; }
+  .job-why { font-size: 13px; color: var(--muted); margin: 7px 0 0; }
+  .job-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .tierpill {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--tier); background: var(--tier-bg); border-radius: 4px; padding: 3px 7px;
+  }
+  .hh { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
+  .hh summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+  .hh summary::-webkit-details-marker { display: none; }
+  .hh summary::after { content: "Why \25BE"; font-weight: 700; color: var(--accent); }
+  .hh[open] summary::after { content: "Hide \25B4"; }
+  .hh .part b { color: var(--ink); font-weight: 700; }
+  .hh ul { margin: 6px 0 0; padding-left: 18px; }
+  .hh li { margin: 2px 0; }
+  .hh .basis { color: var(--dim); font-style: italic; }
+  .hh.ats summary::after { content: "Keywords \25BE"; }
+  .deep { font-size: 12.5px; margin: 7px 0 0; padding: 7px 9px; border-radius: 7px; background: var(--surface-2); color: var(--ink); }
+  .deep b { font-weight: 700; }
+  .deep .gap { color: var(--muted); }
+  .state {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    border-radius: 999px; padding: 3px 8px 3px 7px;
+  }
+  .state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .state.flagged { color: var(--flag); background: var(--flag-bg); }
+  .state.applied { color: var(--applied); background: var(--applied-bg); }
+  .state.dismissed { color: var(--dismissed); background: var(--dismissed-bg); }
+  .state.closed { color: var(--closed); background: var(--closed-bg); }
+  .age { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  .age.old { color: var(--old); font-weight: 700; border: 1px dashed currentColor; border-radius: 999px; padding: 1px 8px; }
+  .newtag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 3px 8px;
+  }
+  .job.is-closed { opacity: 0.72; }
+  .closed-why { font-size: 12.5px; color: var(--closed); margin: 7px 0 0; }
+  .catsel {
+    font: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted);
+    background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%234a5f80'/%3E%3C/svg%3E") no-repeat right 8px center;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 22px 3px 9px; min-height: 26px; max-width: 60%; flex: 0 0 auto;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+  }
+  .catsel.is-mine { color: var(--accent); border-color: var(--accent); }
+  @media (prefers-color-scheme: dark) {
+    .catsel { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%239fb3d1'/%3E%3C/svg%3E"); }
+  }
+  .catsel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .spacer { flex: 1; }
+  .act {
+    font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+    border-radius: 7px; padding: 8px 12px; min-height: 40px; cursor: pointer;
+  }
+  .act[data-act="flagged"][aria-pressed="true"]   { background: var(--flag-bg); border-color: var(--flag); color: var(--flag); }
+  .act[data-act="applied"][aria-pressed="true"]   { background: var(--applied-bg); border-color: var(--applied); color: var(--applied); }
+  .act[data-act="dismissed"][aria-pressed="true"] { background: var(--dismissed-bg); border-color: var(--dismissed); color: var(--dismissed); }
+  .open {
+    font-size: 13px; font-weight: 700; color: var(--accent); text-decoration: none;
+    padding: 8px 2px; min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .open:hover { text-decoration: underline; }
+  .found { font-size: 11.5px; color: var(--dim); }
+
+  .note {
+    border: 1px dashed var(--line); border-radius: 8px; padding: 14px;
+    color: var(--muted); font-size: 13.5px; line-height: 1.5;
+  }
+  .note b { color: var(--ink); }
+  .note.bad { border-color: var(--err); color: var(--err); }
+  footer { color: var(--dim); font-size: 11.5px; padding-block: 0 40px; }
+
+  .sync {
+    position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    max-width: calc(100% - 32px); background: var(--ink); color: var(--surface);
+    font-size: 13px; border-radius: 10px; padding: 10px 14px; z-index: 20;
+    box-shadow: 0 4px 16px rgba(14, 30, 56, 0.25);
+  }
+  .sync[hidden] { display: none; }
+  .linkbtn { font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0 0 0 6px; text-decoration: underline; cursor: pointer; }
+
+  dialog {
+    border: 1px solid var(--line); border-radius: 12px; padding: 18px;
+    background: var(--surface); color: var(--ink); width: min(380px, calc(100% - 32px));
+  }
+  dialog::backdrop { background: rgba(14, 30, 56, 0.4); }
+  dialog h2 { font-size: 16px; margin: 0 0 6px; }
+  dialog p { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  dialog input {
+    font: inherit; width: 100%; padding: 9px 11px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  }
+  .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .act.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 </style>
 </head>
 <body>
-  <main class="card">
+
+<header>
+  <div class="wrap head-inner">
     <h1>Poland Role Pipeline</h1>
-    <p>The job search moved. Roles are tracked in a live pipeline you can flag and come back to, refreshed every 12 hours.</p>
-    <a class="go" href="https://claude.ai/artifact/ARMFpqehuWJmojGwnqMAFB">Open the pipeline &rarr;</a>
-    <p class="fine">If you are not redirected automatically, use the button above. Sign in with the Claude account that owns the pipeline.</p>
-  </main>
+    <p class="sub" id="sub">English-speaking consulting, strategy and transformation roles.</p>
+    <div class="filters" id="filters" role="group" aria-label="Filters"></div>
+    <div class="filterline" id="filterline" hidden><span id="filtersummary"></span><button type="button" class="clear" id="clear">Clear filters</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="list"></div>
+</main>
+
+<footer class="wrap">
+  Roles are refreshed once a day, overnight, and head-hunted at 07:00 Dubai time. They are stored in
+  full: nothing is ever removed, so “All” stays the complete history. Flags are
+  saved in this browser. Role types are set automatically from the title; a
+  type you change is synced to your other devices once you enter your edit key.
+</footer>
+
+<div class="sync" id="sync" role="status" aria-live="polite" hidden></div>
+
+<dialog id="keydlg" aria-labelledby="keydlg-title">
+  <form method="dialog">
+    <h2 id="keydlg-title">Sync your changes</h2>
+    <p>Enter your edit key to sync role types across your devices. It is saved
+      on this device, so you only enter it once per device.</p>
+    <input type="password" name="key" autocomplete="current-password" aria-label="Edit key" required>
+    <div class="dlg-actions">
+      <button type="submit" value="cancel" formnovalidate class="act">Not now</button>
+      <button type="submit" value="save" class="act primary">Save key</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  // Served by api/jobs.js, which reads the Blob feed the daily cron writes.
+  // Absolute rather than relative so the copies of this page served from
+  // other origins reach the same feed; the API sends CORS headers for exactly
+  // that reason.
+  var API = "https://poland-job-scraper.vercel.app/api";
+  var FEED = API + "/jobs";
+  var OVERRIDES = API + "/overrides";
+  var FLAG_KEY = "pipeline.flags.v1";
+  var FILTER_KEY = "pipeline.filter.v1";
+  // v2: the Fit filter moved from tiers to Head Hunter score bands.
+  var FIT_KEY = "pipeline.fit.v2";
+  var CAT_KEY = "pipeline.cat.v1";
+  var POSTED_KEY = "pipeline.posted.v1";
+  var VERDICT_KEY = "pipeline.verdict.v1";
+  // Category overrides: the last copy the server confirmed, the edits it has
+  // not confirmed yet, and the key that lets this device write.
+  var CAT_CACHE_KEY = "pipeline.categories.v1";
+  var CAT_PENDING_KEY = "pipeline.categories.pending.v1";
+  var EDIT_KEY = "pipeline.editkey.v1";
+  var EMBEDDED = {"updated_at":"2026-09-17T15:20:00Z","count":19,"jobs":[{"id":"accenture-74ec6229","title":"Strategy Consultant — Operating Model & Organizational Design","company":"Accenture","url":"https://www.accenture.com/be-en/careers/jobdetails?id=R00291171_en","tier":1,"why":"Designing enterprise operating models and advising on reorganisations — your FAB coverage-model redesign (1,500+ groups, 10 teams) and Al-Ghurair TOM. Asks 2+ yrs strategy consulting.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"accenture-0d4f8d5b","title":"S&C Poland — Strategy Analyst, Warsaw","company":"Accenture","url":"https://accenture.wd103.myworkdayjobs.com/AccentureCareers/job/Warsaw/S-C-GN-Poland---Strategy---Analyst_R00285728-1/apply","tier":1,"why":"Warsaw-based opening in Accenture's Strategy practice.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"mastercard-683b568e","title":"Consultant, Advisors & Consulting Services — Strategy & Transformation","company":"Mastercard","url":"https://careers.mastercard.com/us/en/job/R-265030/Consultant-Advisors-Consulting-Services-Strategy-Transformation","tier":1,"why":"Management consulting inside a payments company. You rebuilt ACH processing settling ~$200mn weekly and spent a year in wholesale banking.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"deloitte-53238f2c","title":"Consultant — CFO Advisory, Finance Strategy & Operations, Warsaw","company":"Deloitte","url":"https://jobs.accaglobal.com/job/14139992/consultant-cfo-advisory-finance-strategy-and-operations-warsaw/","tier":1,"why":"Your old practice and your old work, different city. Alumni status is a real advantage here.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"pwc-56b7d01c","title":"(Senior) Consultant — Finance Transformation, Warsaw","company":"PwC","url":"https://workopia.io/jobs/7200efc29418a2d5f73d640967448450","tier":1,"why":"End-to-end finance operating model redesign and ERP-driven transformation: your Deloitte Workday work plus the Al-Ghurair TOM, verbatim.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"ey-2e51af70","title":"Business Transformation Consultant, Warsaw","company":"EY","url":"https://careers.ey.com/ey/job/Warszawa-Business-Transformation-Consultant-MZ-01-208/697111101/","tier":1,"why":"Straight business transformation consulting, Warsaw-based.","status":"new","found_at":"2026-09-17","category":"transformation"},{"id":"capco-444dbc9e","title":"Business Analyst — Product Control","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8146866","tier":2,"why":"Finance transformation across Global Markets at a consultancy that does only financial services.","status":"new","found_at":"2026-09-17","category":"finance"},{"id":"capco-14f10e97","title":"Senior Business Analyst","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7383078","tier":2,"why":"Senior BA in Capco's Warsaw business consulting team.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-83bd1ad1","title":"Senior Business Analyst — Cards","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/8081357","tier":2,"why":"Large-scale cards transformation for banking clients.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-9a4df712","title":"Business Analyst — Payments","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/5236287","tier":2,"why":"Payments transformation — closest match to your Deloitte ACH/NACHA rebuild.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"capco-4ab243a3","title":"Business Analyst — BCIM/TPM","company":"Capco","url":"https://job-boards.greenhouse.io/capco/jobs/7962951","tier":2,"why":"Transformation and governance initiatives across business and technology.","status":"new","found_at":"2026-09-17","category":"ba"},{"id":"bcg-b287111f","title":"Associate or Consultant, Warsaw","company":"BCG","url":"https://jobs.managementconsulted.com/jobs/499260478-associate-or-consultant-warsaw","tier":2,"why":"MBB generalist consulting in Warsaw. IESE MiM plus 4 yrs is a credible Consultant-track profile.","status":"new","found_at":"2026-09-17","category":"other"},{"id":"pwc-strategy-964bc868","title":"Team Member — Strategy&, Warsaw","company":"PwC Strategy&","url":"https://jobs-cee.pwc.com/ce/en/job/528973WD/Team-Member-Strategy","tier":2,"why":"PwC's strategy arm in Warsaw.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"accenture-6e9f6c9d","title":"M&A Strategy Analyst / Consultant — Accenture Strategy","company":"Accenture","url":"https://en.wizbii.com/company/accenture/job/analyst-accenture-strategy-practice-m-a","tier":2,"why":"Transaction advisory. Your Kazakhstan market-entry case — sizing the FCY gap, modelling three entry structures — is exactly this shape.","status":"new","found_at":"2026-09-17","category":"deals"},{"id":"ey-440cb83d","title":"Technology Strategy & Transformation Consultant","company":"EY","url":"https://workopia.io/jobs/9edf367d6c532fcaaf7df11f2e826298","tier":2,"why":"Digital transformation for financial and insurance clients.","status":"new","found_at":"2026-09-17","category":"tech"},{"id":"accenture-683cffaa","title":"Business Strategy Consultant — ICH Europe","company":"Accenture","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Business_Strategy_Consultant_Life_SciencesHealthcare_ICH_Europe.id21304756","tier":2,"why":"Growth strategy, market entry, corporate strategy, operating model, M&A. Capabilities match; industry (life sciences) does not.","status":"new","found_at":"2026-09-17","category":"strategy"},{"id":"xebia-bd137a8b","title":"Poland & CEE job board","company":"Xebia","url":"https://job-boards.greenhouse.io/xebiacee","tier":3,"why":"Intelligent automation and digital transformation — your Kagool year. This is the whole board, not one posting.","status":"new","found_at":"2026-09-17","category":"other"},{"id":"efinancialcareers-bdda0526","title":"Lead Operational Excellence Specialist, Warsaw","company":"eFinancialCareers","url":"https://www.efinancialcareers.com/jobs-Poland-Warsaw-Lead_Operational_Excellence_Specialist.id24201705","tier":3,"why":"Operational excellence with your Lean Six Sigma and Treasury process redesign behind it.","status":"new","found_at":"2026-09-17","category":"transformation"},{"id":"vml-enterprise-solutions-c729b96c","title":"Senior Project Manager — Poland","company":"VML Enterprise Solutions","url":"https://job-boards.greenhouse.io/vmlenterprisesolutions/jobs/8328979002","tier":3,"why":"Agile delivery and operational improvement. PMO-adjacent rather than strategy.","status":"new","found_at":"2026-09-17","category":"pmo"}]};
+  // Head Hunter score bands. Must match BANDS in api/_headhunter.js;
+  // tests/headhunter.test.mjs checks that it does.
+  var BANDS = [
+    { key: "strong", min: 70, label: "Strong match" },
+    { key: "good", min: 55, label: "Good match" },
+    { key: "stretch", min: 40, label: "Stretch" },
+    { key: "long", min: 0, label: "Long shot" }
+  ];
+  var BAND_STYLE = {
+    strong:  { color: "var(--t1)", bg: "var(--t1-bg)" },
+    good:    { color: "var(--t2)", bg: "var(--t2-bg)" },
+    stretch: { color: "var(--t3)", bg: "var(--t3-bg)" },
+    long:    { color: "var(--t4)", bg: "var(--t4-bg)" }
+  };
+  var UNRANKED = { label: "Not scored", color: "var(--line)", bg: "var(--surface-2)" };
+  var PARTS = [
+    { key: "skills", label: "Skills" },
+    { key: "seniority", label: "Seniority" },
+    { key: "domain", label: "Domain" },
+    { key: "practical", label: "Practical" }
+  ];
+  function scoreOf(job) { return typeof job.score === "number" ? job.score : null; }
+  // The copy built into the page predates the score, so a role can be unscored.
+  function bandOf(job) {
+    var sc = scoreOf(job);
+    if (sc === null) return "unscored";
+    for (var i = 0; i < BANDS.length; i++) if (sc >= BANDS[i].min) return BANDS[i].key;
+    return "long";
+  }
+  function bandInfo(key) {
+    for (var i = 0; i < BANDS.length; i++) if (BANDS[i].key === key) {
+      return { label: BANDS[i].label, color: BAND_STYLE[key].color, bg: BAND_STYLE[key].bg };
+    }
+    return UNRANKED;
+  }
+  function bandRange(i) {
+    return i === 0 ? BANDS[0].min + "+" : BANDS[i].min + "\u2013" + (BANDS[i - 1].min - 1);
+  }
+  var FILTERS = [
+    { key: "open",      label: "Open",      color: "var(--open)" },
+    { key: "flagged",   label: "Flagged",   color: "var(--flag)" },
+    { key: "applied",   label: "Applied",   color: "var(--applied)" },
+    { key: "dismissed", label: "Dismissed", color: "var(--dismissed)" },
+    { key: "closed",    label: "Closed",    color: "var(--closed)" },
+    { key: "excluded",  label: "Excluded",  color: "var(--closed)" },
+    { key: "all",       label: "All" }
+  ];
+  var STATE_LABEL = { flagged: "Flagged", applied: "Applied", dismissed: "Dismissed" };
+  var OLD_DAYS = 30; // matches OLD_AFTER_DAYS in api/jobs.js
+  var NEW_DAYS = 3;  // a role found this recently carries the New badge
+  // When a role was posted. Buckets are cumulative ("last 7 days" includes
+  // the last 24 hours) because that is how people search a job board.
+  var POSTED = [
+    { key: "any",   label: "Any time" },
+    { key: "new",   label: "New to you (found \u2264 " + NEW_DAYS + " days)" },
+    { key: "1",     label: "Last 24 hours" },
+    { key: "7",     label: "Last 7 days" },
+    { key: "30",    label: "Last 30 days" },
+    { key: "older", label: "Older than 30 days" }
+  ];
+  // Must match api/_category.js; tests/category.test.mjs checks that it does.
+  var CATEGORIES = [
+    { key: "strategy",       label: "Strategy & Consulting" },
+    { key: "transformation", label: "Transformation & Ops" },
+    { key: "finance",        label: "Finance & Markets" },
+    { key: "risk",           label: "Risk & Regulatory" },
+    { key: "deals",          label: "M&A & Deals" },
+    { key: "ba",             label: "Business Analysis" },
+    { key: "pmo",            label: "Project & PMO" },
+    { key: "tech",           label: "Data, AI & Tech" },
+    { key: "other",          label: "Other" }
+  ];
+  var CAT_LABEL = {};
+  CATEGORIES.forEach(function (c) { CAT_LABEL[c.key] = c.label; });
+
+  var listEl = document.getElementById("list");
+  var filtersEl = document.getElementById("filters");
+  var filterLineEl = document.getElementById("filterline");
+  var summaryEl = document.getElementById("filtersummary");
+  var subEl = document.getElementById("sub");
+  var syncEl = document.getElementById("sync");
+  var keyDlg = document.getElementById("keydlg");
+
+  // The roles ship inside the page, so it renders the full pipeline even if
+  // the feed is unreachable. The fetch below is a freshness upgrade, not a
+  // dependency -- an artifact-backed page has no network hop and neither
+  // should this one.
+  var jobs = (EMBEDDED && EMBEDDED.jobs) || [];
+  var flags = read(FLAG_KEY, {});
+  var filter = str(read(FILTER_KEY, "open"), "open");
+  var fitFilter = str(read(FIT_KEY, "all"), "all");
+  var catFilter = str(read(CAT_KEY, "all"), "all");
+  var postedFilter = str(read(POSTED_KEY, "any"), "any");
+  var verdictFilter = str(read(VERDICT_KEY, "all"), "all");
+  // The morning head-hunt's verdicts, in the order he would act on them.
+  var VERDICTS = [
+    { key: "tailor",   label: "Apply + tailor", verdict: "APPLY + TAILOR" },
+    { key: "apply",    label: "Apply",          verdict: "APPLY" },
+    { key: "stretch",  label: "Stretch",        verdict: "STRETCH" },
+    { key: "skip",     label: "Skip",           verdict: "SKIP" },
+    { key: "excluded", label: "Excluded",       verdict: "EXCLUDED" },
+    { key: "none",     label: "Not head-hunted yet" }
+  ];
+  var catOverrides = obj(read(CAT_CACHE_KEY, {}));
+  var catPending = obj(read(CAT_PENDING_KEY, {}));
+
+  function read(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private window */ }
+  }
+  function str(v, fallback) { return typeof v === "string" ? v : fallback; }
+  function obj(v) { return v && typeof v === "object" ? v : {}; }
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  // A flag set here wins; otherwise fall back to the status in the feed, so a
+  // role marked elsewhere still shows its state on first visit.
+  function statusOf(job) { return flags[job.id] || job.status || "new"; }
+
+  // Closed by the daily check or found dead by the refresh. Either way it is
+  // no longer a job he can apply to. The embedded copy predates `closed`, so
+  // `live` counts too.
+  function isClosed(job) { return !!job.closed || job.live === false; }
+
+  // Out for him whatever the score: the posting requires a language he does
+  // not speak, or the head-hunt found another hard bar (an internal-only
+  // posting, say). Kept and filterable, never deleted, in case a reading was wrong.
+  function isExcluded(job) { return !!job.excluded || !!(job.deep && job.deep.verdict === "EXCLUDED"); }
+  function excludedWhy(job) {
+    if (job.excluded) return job.excluded;
+    return job.deep && job.deep.gap ? job.deep.gap : "excluded by the head-hunt";
+  }
+  function verdictOf(job) {
+    var v = job.deep && job.deep.verdict;
+    for (var i = 0; i < VERDICTS.length; i++) if (VERDICTS[i].verdict && VERDICTS[i].verdict === v) return VERDICTS[i].key;
+    return "none";
+  }
+
+  function autoCategory(job) { return CAT_LABEL[job.category] ? job.category : "other"; }
+  // An unsynced edit on this device wins over the server's copy; null in the
+  // pending set means "back to automatic".
+  function overrideOf(job) {
+    if (Object.prototype.hasOwnProperty.call(catPending, job.id)) return catPending[job.id];
+    return catOverrides[job.id] || null;
+  }
+  function categoryOf(job) {
+    var o = overrideOf(job);
+    return o && CAT_LABEL[o] ? o : autoCategory(job);
+  }
+
+  // Whole days between a date and today. Date-only strings are read as local
+  // midnight so "posted today" does not flip at UTC midnight.
+  var DAY = 86400000;
+  function daysSince(stamp) {
+    if (!stamp) return null;
+    var s = String(stamp);
+    var t = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00:00").getTime() : Date.parse(s);
+    if (isNaN(t)) return null;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var then = new Date(t); then.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((today - then) / DAY));
+  }
+  // The employer's own posting date when there is one; otherwise when the
+  // pipeline first saw the role, labelled as such so the two never blur.
+  function ageOf(job) {
+    var posted = daysSince(job.posted_at);
+    if (posted !== null) return { days: posted, real: true };
+    var found = daysSince(job.found_at);
+    return found !== null ? { days: found, real: false } : null;
+  }
+  function isNew(job) {
+    var d = daysSince(job.found_at);
+    return d !== null && d <= NEW_DAYS && !isClosed(job);
+  }
+  function ageText(a) {
+    var verb = a.real ? "Posted " : "Found ";
+    if (a.days === 0) return verb + "today";
+    return verb + a.days + (a.days === 1 ? " day ago" : " days ago");
+  }
+  function postedMatches(job, key) {
+    if (key === "any") return true;
+    if (key === "new") return isNew(job);
+    var a = ageOf(job);
+    if (!a) return false;
+    if (key === "older") return a.days > 30;
+    return a.days <= Number(key);
+  }
+
+  // Each filter counts what the *other* filters allow, so every number on a
+  // chip is exactly how many roles pressing it would show.
+  function passes(job, skip) {
+    if (skip !== "status" && filter !== "all") {
+      var st = statusOf(job);
+      // Open is the working shortlist, so closed roles leave it. Flagged,
+      // Applied and Dismissed keep them, tagged, because what he marked still
+      // matters after the posting ends.
+      // A role requiring a language he does not speak leaves Open too, but
+      // stays under All with the reason, in case the reading was wrong.
+      if (filter === "open") { if (!(st === "new" || st === "flagged") || isClosed(job) || isExcluded(job)) return false; }
+      else if (filter === "closed") { if (!isClosed(job)) return false; }
+      else if (filter === "excluded") { if (!isExcluded(job)) return false; }
+      else if (st !== filter) return false;
+    }
+    if (skip !== "fit" && fitFilter !== "all" && bandOf(job) !== fitFilter) return false;
+    if (skip !== "cat" && catFilter !== "all" && categoryOf(job) !== catFilter) return false;
+    if (skip !== "posted" && !postedMatches(job, postedFilter)) return false;
+    if (skip !== "verdict" && verdictFilter !== "all" && verdictOf(job) !== verdictFilter) return false;
+    return true;
+  }
+
+  function statusCounts() {
+    var c = { open: 0, flagged: 0, applied: 0, dismissed: 0, closed: 0, excluded: 0, all: 0 };
+    jobs.forEach(function (j) {
+      if (!passes(j, "status")) return;
+      var st = statusOf(j);
+      c.all++;
+      if (isExcluded(j)) c.excluded++;
+      if (isClosed(j)) c.closed++;
+      else if ((st === "new" || st === "flagged") && !isExcluded(j)) c.open++;
+      if (st === "flagged") c.flagged++;
+      if (st === "applied") c.applied++;
+      if (st === "dismissed") c.dismissed++;
+    });
+    return c;
+  }
+  function tally(skip, keyOf) {
+    var c = { all: 0 };
+    jobs.forEach(function (j) {
+      if (!passes(j, skip)) return;
+      c.all++;
+      var k = keyOf(j);
+      c[k] = (c[k] || 0) + 1;
+    });
+    return c;
+  }
+
+  function select(name, caption, value, options, isDefault) {
+    return '<label><span class="cap">' + esc(caption) + '</span><select class="fsel' + (isDefault ? "" : " is-set") +
+      '" data-f="' + name + '" aria-label="' + esc(caption) + '">' +
+      options.map(function (o) {
+        return '<option value="' + esc(o.key) + '"' + (o.key === value ? " selected" : "") + ">" +
+          esc(o.label) + (o.n == null ? "" : " (" + o.n + ")") + "</option>";
+      }).join("") + "</select></label>";
+  }
+
+  function renderFilters() {
+    var sc = statusCounts();
+    var fc = tally("fit", bandOf);
+    var cc = tally("cat", categoryOf);
+    var vc = tally("verdict", verdictOf);
+    var pc = {};
+    POSTED.forEach(function (p) {
+      pc[p.key] = jobs.filter(function (j) { return passes(j, "posted") && postedMatches(j, p.key); }).length;
+    });
+
+    filtersEl.innerHTML =
+      select("status", "Status", filter, FILTERS.map(function (f) { return { key: f.key, label: f.label, n: sc[f.key] || 0 }; }), filter === "open") +
+      select("fit", "Fit score", fitFilter, [{ key: "all", label: "All scores", n: fc.all }].concat(BANDS.map(function (b, i) {
+        return { key: b.key, label: b.label + " (" + bandRange(i) + ")", n: fc[b.key] || 0 };
+      })).concat(fc.unscored || fitFilter === "unscored" ? [{ key: "unscored", label: UNRANKED.label, n: fc.unscored || 0 }] : []),
+      fitFilter === "all") +
+      // Only types with roles under the other filters, plus the selected one.
+      select("cat", "Type", catFilter, [{ key: "all", label: "All types", n: cc.all }].concat(
+        CATEGORIES.filter(function (c) { return cc[c.key] || catFilter === c.key; }).map(function (c) {
+          return { key: c.key, label: c.label, n: cc[c.key] || 0 };
+        })), catFilter === "all") +
+      select("posted", "Posted", postedFilter, POSTED.map(function (p) {
+        return { key: p.key, label: p.label, n: pc[p.key] };
+      }), postedFilter === "any") +
+      select("verdict", "Head-hunt", verdictFilter, [{ key: "all", label: "All verdicts", n: vc.all }].concat(VERDICTS.map(function (v) {
+        return { key: v.key, label: v.label, n: vc[v.key] || 0 };
+      })), verdictFilter === "all");
+
+    var active = filter !== "open" || fitFilter !== "all" || catFilter !== "all" || postedFilter !== "any" || verdictFilter !== "all";
+    filterLineEl.hidden = !active;
+    if (active) summaryEl.textContent = jobs.filter(function (j) { return passes(j); }).length + " roles match";
+  }
+
+  function legend() {
+    var fit = BANDS.map(function (b, i) {
+      return '<span><i class="swatch" style="--c: ' + BAND_STYLE[b.key].color + '"></i>' + esc(b.label) + " " + bandRange(i) + "</span>";
+    }).join("");
+    var status = ["flagged", "applied", "dismissed"].map(function (k) {
+      return '<span><i class="swatch round" style="--c: var(--' + (k === "flagged" ? "flag" : k) + ')"></i>' +
+        STATE_LABEL[k] + "</span>";
+    }).join("");
+    status += '<span><i class="swatch round" style="--c: var(--closed)"></i>Closed</span>' +
+      '<span><i class="swatch dash" style="--c: var(--old)"></i>Posted ' + OLD_DAYS + "+ days ago</span>";
+    return '<details class="key"><summary>Colour key</summary><div class="legend"><b>Fit /100</b>' + fit + "<b>Status</b>" + status +
+      '<b>Type</b><span><i class="swatch mine"></i>changed by you</span>' +
+      '<span><i class="newtag">New</i>found in the last ' + NEW_DAYS + " days</span></div></details>";
+  }
+
+  function categorySelect(j) {
+    var auto = autoCategory(j);
+    var current = categoryOf(j);
+    var mine = current !== auto;
+    return '<select class="catsel' + (mine ? " is-mine" : "") + '" data-cat-for="' + esc(j.id) +
+      '" aria-label="Role type' + (mine ? ", changed by you" : ", automatic") + '">' +
+      CATEGORIES.map(function (c) {
+        return '<option value="' + c.key + '"' + (c.key === current ? " selected" : "") + ">" +
+          esc(c.label) + (c.key === auto ? " (auto)" : "") + "</option>";
+      }).join("") + "</select>";
+  }
+
+  function renderList() {
+    if (!jobs.length) {
+      listEl.innerHTML = '<p class="note"><b>No roles stored yet.</b> The next scheduled refresh will add them.</p>';
+      return;
+    }
+    var shown = jobs.filter(function (j) { return passes(j); });
+    if (!shown.length) {
+      var parts = [labelOf(FILTERS, filter)];
+      if (fitFilter !== "all") parts.push(bandInfo(fitFilter).label);
+      if (catFilter !== "all") parts.push(CAT_LABEL[catFilter] || catFilter);
+      if (postedFilter !== "any") parts.push(labelOf(POSTED, postedFilter));
+      if (verdictFilter !== "all") parts.push(labelOf(VERDICTS, verdictFilter));
+      listEl.innerHTML = legend() + '<p class="note">Nothing under <b>' + esc(parts.join(" · ")) +
+        "</b> right now. Try another filter.</p>";
+      return;
+    }
+    // Closed roles sink below open ones wherever both are shown.
+    shown.sort(function (a, b) {
+      // Highest score first; at the same score, newest first, because a
+      // fresh posting is worth more attention than an old one.
+      var aa = ageOf(a), ab = ageOf(b);
+      var sa = scoreOf(a), sb = scoreOf(b);
+      return (isClosed(a) - isClosed(b)) ||
+        ((sb === null ? -1 : sb) - (sa === null ? -1 : sa)) ||
+        ((aa ? aa.days : 9999) - (ab ? ab.days : 9999)) ||
+        String(a.company).localeCompare(String(b.company));
+    });
+
+    listEl.innerHTML = legend() + shown.map(function (j) {
+      var st = statusOf(j);
+      var tier = bandInfo(bandOf(j));
+      var sc = scoreOf(j);
+      var stateTag = STATE_LABEL[st] ? '<span class="state ' + st + '">' + STATE_LABEL[st] + "</span>" : "";
+      var dead = isClosed(j);
+      if (dead) stateTag += '<span class="state closed">Closed</span>';
+      else if (isNew(j)) stateTag = '<span class="newtag">New</span>' + stateTag;
+      var age = ageOf(j);
+      var ageTag = age ? '<span class="age' + (age.real && age.days >= OLD_DAYS && !dead ? " old" : "") + '" title="' +
+        (age.real ? "Employer posting date " + esc(String(j.posted_at).slice(0, 10)) : "No posting date given; first found " + esc(j.found_at)) +
+        '">' + esc(ageText(age)) + "</span>" : "";
+      var why = dead
+        ? '<p class="closed-why">' + esc((j.closed && j.closed.reason) || "link no longer works") +
+          (j.closed && j.closed.since ? " \u00b7 found " + esc(String(j.closed.since).slice(0, 10)) : "") + "</p>"
+        : isExcluded(j) ? '<p class="closed-why">Excluded: ' + esc(excludedWhy(j)) + "</p>" : "";
+      return '' +
+        '<article class="job' + (STATE_LABEL[st] ? " is-" + st : "") + (dead ? " is-closed" : "") +
+          '" style="--tier: ' + tier.color + "; --tier-bg: " + tier.bg + '">' +
+          '<div class="job-head"><div class="job-co">' + esc(j.company) + "</div>" + categorySelect(j) + "</div>" +
+          '<p class="job-title">' + esc(j.title) + "</p>" +
+          (j.why ? '<p class="job-why">' + esc(j.why) + "</p>" : "") + why + deepLine(j) + breakdown(j) + atsBlock(j) +
+          '<div class="job-foot">' +
+            '<span class="tierpill" title="Head Hunter score">' + (sc === null ? "" : '<span class="mono">' + sc + "</span>/100 \u00b7 ") +
+              esc(tier.label) + "</span>" + stateTag +
+            ageTag +
+            '<span class="spacer"></span>' +
+            '<a class="open" href="' + esc(j.url) + '" target="_blank" rel="noopener">Open &rarr;</a>' +
+          "</div>" +
+          '<div class="job-foot">' +
+            '<button class="act" type="button" data-act="flagged" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "flagged") + '">Flag</button>' +
+            '<button class="act" type="button" data-act="applied" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "applied") + '">Applied</button>' +
+            '<button class="act" type="button" data-act="dismissed" data-id="' + esc(j.id) +
+              '" aria-pressed="' + (st === "dismissed") + '">Dismiss</button>' +
+          "</div>" +
+        "</article>";
+    }).join("");
+  }
+
+  // The morning head-hunt's verdict from reading the whole posting. Shown
+  // above the automatic breakdown because it is the better-informed of the two.
+  function deepLine(j) {
+    var d = j.deep;
+    if (!d || typeof d.score !== "number") return "";
+    return '<p class="deep">Head-hunted <b class="mono">' + d.score + "</b>/100 \u00b7 <b>" + esc(d.verdict) + "</b>" +
+      (d.gap ? ' <span class="gap">\u00b7 Biggest gap: ' + esc(d.gap) + "</span>" : "") + "</p>";
+  }
+
+  // The four parts on one line; the reasons behind them one tap away.
+  function breakdown(j) {
+    var p = j.score_parts;
+    if (!p) return "";
+    var line = PARTS.map(function (x) {
+      var part = p[x.key] || {};
+      return '<span class="part">' + x.label + ' <b class="mono">' + (part.score == null ? "\u2013" : part.score) + "</b>/" + (part.max || "") + "</span>";
+    }).join("");
+    var items = [];
+    var sk = p.skills || {};
+    if (sk.matched && sk.matched.length) items.push("<li><b>Proven in a paid role:</b> " + esc(sk.matched.join(", ")) + "</li>");
+    if (sk.listed_only && sk.listed_only.length) items.push("<li><b>Only listed or from a course, scores 0:</b> " + esc(sk.listed_only.join(", ")) + "</li>");
+    if (sk.missing && sk.missing.length) items.push("<li><b>Asked for, not in your record:</b> " + esc(sk.missing.join(", ")) + "</li>");
+    ["seniority", "domain", "practical"].forEach(function (k) {
+      if (p[k] && p[k].note) items.push("<li><b>" + k.charAt(0).toUpperCase() + k.slice(1) + ":</b> " + esc(p[k].note) + "</li>");
+    });
+    var basis = j.score_basis === "title only"
+      ? '<li class="basis">Scored from the title only. The daily check reads the posting itself and rescores it.</li>'
+      : "";
+    return '<details class="hh"><summary>' + line + "</summary><ul>" + items.join("") + basis + "</ul></details>";
+  }
+
+  // What an ATS search would find: the exact title to put under his name, and
+  // the posting's own keywords against his resume. Recruiters search by exact
+  // strings, so the posting's spelling is the one shown.
+  function atsBlock(j) {
+    var a = j.ats;
+    if (!a || !a.headline) return "";
+    var head = '<li><b>Headline under your name:</b> \u201c' + esc(a.headline) + '\u201d, the exact title from the posting</li>';
+    if (a.pending || !a.total) {
+      return '<details class="hh ats"><summary><span class="part">ATS keywords <b class="mono">\u2013</b></span></summary><ul>' +
+        head + '<li class="basis">The posting\u2019s keywords are read at the next daily check.</li></ul></details>';
+    }
+    var lo = a.target ? a.target[0] : 25, hi = a.target ? a.target[1] : 35;
+    var aim = Math.min(lo, a.reachable);
+    var items = [head];
+    if (a.on_resume.length) items.push("<li><b>Already on your resume:</b> " + esc(a.on_resume.join(", ")) + "</li>");
+    if (a.can_add.length) items.push("<li><b>True for you, add in these exact words:</b> " + esc(a.can_add.join(", ")) + "</li>");
+    if (a.missing.length) items.push("<li><b>In the posting, not in your record:</b> " + esc(a.missing.join(", ")) + "</li>");
+    items.push('<li class="basis">A tailored resume should carry ' + lo + "\u2013" + hi + " of the posting\u2019s terms, woven into real bullets, never pasted in. " +
+      (a.reachable < lo ? "This posting has only " + a.reachable + " you can truthfully use, so aim for all " + aim + "." : "") + "</li>");
+    return '<details class="hh ats"><summary><span class="part">ATS keywords <b class="mono">' + a.on_resume.length + "</b>/" + a.total +
+      ' on resume</span><span class="part">+<b class="mono">' + a.can_add.length + "</b> you can add</span></summary><ul>" + items.join("") + "</ul></details>";
+  }
+
+  function labelOf(list, key) {
+    for (var i = 0; i < list.length; i++) if (list[i].key === key) return list[i].label;
+    return key;
+  }
+
+  function render() { renderFilters(); renderList(); }
+
+  function showUpdated(stamp, n) {
+    if (!stamp) return;
+    var when = new Date(stamp);
+    subEl.textContent = n + " roles tracked · last refreshed " +
+      (isNaN(when) ? stamp : when.toLocaleString());
+  }
+
+  // --- category sync ----------------------------------------------------------
+  //
+  // Edits apply on this device at once and are queued; the queue is sent to
+  // api/overrides.js with the edit key, and only cleared once the server has
+  // confirmed. Nothing is lost offline or before the key is entered.
+
+  var hideTimer = null;
+  function showSync(message, withKeyButton, fade) {
+    clearTimeout(hideTimer);
+    syncEl.innerHTML = esc(message) +
+      (withKeyButton ? ' <button type="button" class="linkbtn" data-key>Enter edit key</button>' : "");
+    syncEl.hidden = false;
+    if (fade) hideTimer = setTimeout(function () { syncEl.hidden = true; }, 2500);
+  }
+
+  function editKey() { return str(read(EDIT_KEY, ""), ""); }
+
+  function askForKey() {
+    if (keyDlg && typeof keyDlg.showModal === "function") {
+      keyDlg.querySelector("input").value = "";
+      keyDlg.showModal();
+      return;
+    }
+    var k = window.prompt("Edit key (saved on this device):");
+    if (k) { write(EDIT_KEY, k.trim()); flush(); }
+  }
+
+  var flushing = false;
+  function flush() {
+    var ids = Object.keys(catPending);
+    if (!ids.length || flushing) return;
+    var key = editKey();
+    if (!key) {
+      showSync("Saved on this device only.", true);
+      return;
+    }
+    flushing = true;
+    var sent = 0;
+    (function next() {
+      var id = ids.shift();
+      if (!id) {
+        flushing = false;
+        write(CAT_CACHE_KEY, catOverrides);
+        render();
+        showSync("Synced " + sent + " change" + (sent === 1 ? "" : "s") + " ✓", false, true);
+        // Anything edited while this batch was in flight goes next.
+        if (Object.keys(catPending).length) flush();
+        return;
+      }
+      var value = catPending[id];
+      fetch(OVERRIDES, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + key },
+        body: JSON.stringify({ id: id, category: value })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          if (res.ok) {
+            catOverrides = obj(body.categories);
+            // Only clear it if it was not edited again meanwhile.
+            if (catPending[id] === value) delete catPending[id];
+            write(CAT_PENDING_KEY, catPending);
+            sent++;
+            return next();
+          }
+          flushing = false;
+          if (res.status === 401) {
+            write(EDIT_KEY, "");
+            showSync("That edit key was not accepted. Changes are saved on this device.", true);
+          } else if (res.status === 503) {
+            showSync("Sync is not set up on the server yet. Changes are saved on this device.");
+          } else {
+            showSync("Could not sync (" + (body.error || res.status) + "). Changes are saved on this device.");
+          }
+        });
+      }).catch(function () {
+        flushing = false;
+        showSync("Offline. Changes are saved on this device and will sync later.");
+      });
+    })();
+  }
+
+  function setCategory(id, key) {
+    var job = jobs.filter(function (j) { return j.id === id; })[0];
+    if (!job || !CAT_LABEL[key]) return;
+    // Choosing the automatic type again removes the override rather than
+    // pinning it, so a later rule improvement still reaches this role.
+    catPending[id] = key === autoCategory(job) ? null : key;
+    write(CAT_PENDING_KEY, catPending);
+    render();
+    if (!editKey()) { showSync("Saved on this device only.", true); askForKey(); return; }
+    flush();
+  }
+
+  function loadOverrides() {
+    return fetch(OVERRIDES + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        catOverrides = obj(data.categories);
+        write(CAT_CACHE_KEY, catOverrides);
+        render();
+        flush();
+      })
+      .catch(function () { /* the cached copy stands */ });
+  }
+
+  // --- events -----------------------------------------------------------------
+
+  filtersEl.addEventListener("change", function (e) {
+    var sel = e.target.closest(".fsel");
+    if (!sel) return;
+    var v = sel.value;
+    if (sel.dataset.f === "status") { filter = v; write(FILTER_KEY, v); }
+    if (sel.dataset.f === "fit") { fitFilter = v; write(FIT_KEY, v); }
+    if (sel.dataset.f === "cat") { catFilter = v; write(CAT_KEY, v); }
+    if (sel.dataset.f === "posted") { postedFilter = v; write(POSTED_KEY, v); }
+    if (sel.dataset.f === "verdict") { verdictFilter = v; write(VERDICT_KEY, v); }
+    render();
+  });
+
+  document.getElementById("clear").addEventListener("click", function () {
+    filter = "open"; fitFilter = "all"; catFilter = "all"; postedFilter = "any"; verdictFilter = "all";
+    [FILTER_KEY, FIT_KEY, CAT_KEY, POSTED_KEY, VERDICT_KEY].forEach(function (k, i) { write(k, ["open", "all", "all", "any", "all"][i]); });
+    render();
+  });
+
+  listEl.addEventListener("click", function (e) {
+    var btn = e.target.closest(".act");
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var want = btn.dataset.act;
+    var job = jobs.filter(function (j) { return j.id === id; })[0];
+    if (!job) return;
+    // Pressing the active state again returns the role to the open list.
+    flags[id] = (statusOf(job) === want) ? "new" : want;
+    write(FLAG_KEY, flags);
+    render();
+  });
+
+  listEl.addEventListener("change", function (e) {
+    var sel = e.target.closest(".catsel");
+    if (sel) setCategory(sel.dataset.catFor, sel.value);
+  });
+
+  syncEl.addEventListener("click", function (e) {
+    if (e.target.closest("[data-key]")) askForKey();
+  });
+
+  if (keyDlg) {
+    keyDlg.addEventListener("close", function () {
+      if (keyDlg.returnValue !== "save") return;
+      var k = keyDlg.querySelector("input").value.trim();
+      if (k) { write(EDIT_KEY, k); flush(); }
+    });
+  }
+
+  // Another device may have changed a category while this tab was hidden.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") loadOverrides();
+  });
+
+  if (EMBEDDED && EMBEDDED.updated_at) showUpdated(EMBEDDED.updated_at, jobs.length);
+  render();
+  loadOverrides();
+
+  fetch(FEED + "?t=" + Date.now(), { cache: "no-store" })
+    .then(function (res) {
+      if (!res.ok) throw new Error("feed returned " + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      if (!data || !data.jobs || !data.jobs.length) return;
+      jobs = data.jobs;
+      showUpdated(data.updated_at, jobs.length);
+      render();
+    })
+    .catch(function () {
+      // Never clear the page for a failed refresh: the roles built into it are
+      // still the right ones, only the freshness claim is stale.
+      subEl.textContent += " · offline copy";
+    });
+})();
+</script>
 </body>
 </html>

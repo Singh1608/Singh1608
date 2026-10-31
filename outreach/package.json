@@ -1,0 +1,19 @@
+{
+  "name": "poland-recruiter-outreach",
+  "version": "1.0.0",
+  "description": "Apollo.io recruiter outreach campaign with A/B testing",
+  "type": "module",
+  "scripts": {
+    "search": "node apollo-client.mjs",
+    "build": "node campaign-builder.mjs",
+    "review": "node campaign-review.mjs",
+    "send": "node send-campaign.mjs",
+    "help": "cat README.md"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {},
+  "author": "Chandrashekhar Singh",
+  "license": "MIT"
+}

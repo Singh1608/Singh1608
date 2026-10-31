@@ -1,9 +1,39 @@
 {
-  "redirects": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "crons": [
+    {
+      "path": "/api/refresh",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/verify",
+      "schedule": "0 1 * * *"
+    }
+  ],
+  "headers": [
     {
       "source": "/(.*)",
-      "destination": "https://claude.ai/artifact/ARMFpqehuWJmojGwnqMAFB",
-      "permanent": false
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
-  ]
+  ],
+  "functions": {
+    "api/refresh.js": {
+      "maxDuration": 60
+    },
+    "api/verify.js": {
+      "maxDuration": 60
+    },
+    "api/headhunt.js": {
+      "maxDuration": 60
+    },
+    "api/outreach.js": {
+      "maxDuration": 120
+    }
+  }
 }

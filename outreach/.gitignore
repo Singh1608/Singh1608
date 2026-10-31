@@ -1,0 +1,33 @@
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# API Keys and secrets
+*.key
+*.pem
+*.secret
+
+# Campaign data (contains personal emails)
+campaigns/*.json
+logs/*.json
+logs/*.log
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Temp files
+*.tmp
+.temp/

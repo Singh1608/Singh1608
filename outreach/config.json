@@ -1,0 +1,83 @@
+{
+  "targetCompanies": [
+    "Citi",
+    "Capco",
+    "EY",
+    "Accenture",
+    "Marsh McLennan",
+    "State Street",
+    "Goldman Sachs",
+    "JP Morgan"
+  ],
+  "locations": [
+    "Warsaw",
+    "Poland"
+  ],
+  "targetRoles": [
+    {
+      "id": "citi-45323f7e",
+      "company": "Citi",
+      "title": "Senior Business Analyst / Project Manager (Change Projects)",
+      "score": 83
+    },
+    {
+      "id": "capco-de08d07e",
+      "company": "Capco",
+      "title": "Senior Business Analyst",
+      "score": 81
+    },
+    {
+      "id": "ey-tech-strategy",
+      "company": "EY",
+      "title": "Technology Strategy & Transformation Consultant",
+      "score": 81
+    },
+    {
+      "id": "capco-dd6593b4",
+      "company": "Capco",
+      "title": "Business Analyst – Target Operating Model",
+      "score": 80
+    },
+    {
+      "id": "accenture-om-od",
+      "company": "Accenture",
+      "title": "Strategy Consultant (GN) - OM&OD",
+      "score": 78
+    },
+    {
+      "id": "accenture-c-pr",
+      "company": "Accenture",
+      "title": "Strategy Consultant (GN) - C&PR",
+      "score": 77
+    },
+    {
+      "id": "marsh-accounting-ops",
+      "company": "Marsh McLennan",
+      "title": "Business Analyst - Accounting Operations",
+      "score": 75
+    },
+    {
+      "id": "accenture-tds",
+      "company": "Accenture",
+      "title": "Technology Digital Strategy Consultant",
+      "score": 70
+    }
+  ],
+  "interestingRoles": [],
+  "recruiterSearchFilters": {
+    "titles": [
+      "Recruiter",
+      "Talent Acquisition",
+      "Hiring Manager",
+      "HR Manager",
+      "People Operations"
+    ],
+    "departments": [
+      "HR",
+      "Talent Acquisition",
+      "Human Resources"
+    ]
+  },
+  "abTestVariants": 3,
+  "campaignNotes": "Initial outreach to top 8 roles + interesting ones. A/B test message variants."
+}
